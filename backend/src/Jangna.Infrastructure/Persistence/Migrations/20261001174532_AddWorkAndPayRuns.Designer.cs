@@ -3,6 +3,7 @@ using System;
 using Jangna.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Jangna.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(JangnaDbContext))]
-    partial class JangnaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261001174532_AddWorkAndPayRuns")]
+    partial class AddWorkAndPayRuns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -449,58 +452,6 @@ namespace Jangna.Infrastructure.Persistence.Migrations
                     NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ProvinceCode", "AreaCode", "EffectiveFrom"), false);
 
                     b.ToTable("minimum_wages", (string)null);
-                });
-
-            modelBuilder.Entity("Jangna.Core.Entities.OpeningBalance", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<Guid>("EmployeeId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("employee_id");
-
-                    b.Property<string>("Note")
-                        .HasColumnType("text")
-                        .HasColumnName("note");
-
-                    b.Property<decimal>("SocialSecurity")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("social_security");
-
-                    b.Property<decimal>("TaxWithheld")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("tax_withheld");
-
-                    b.Property<decimal>("TaxableIncome")
-                        .HasPrecision(14, 2)
-                        .HasColumnType("numeric(14,2)")
-                        .HasColumnName("taxable_income");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.HasKey("Id")
-                        .HasName("pk_opening_balances");
-
-                    b.HasIndex("TenantId", "EmployeeId", "Year")
-                        .IsUnique()
-                        .HasDatabaseName("ix_opening_balances_tenant_id_employee_id_year");
-
-                    b.ToTable("opening_balances", (string)null);
                 });
 
             modelBuilder.Entity("Jangna.Core.Entities.PayRun", b =>

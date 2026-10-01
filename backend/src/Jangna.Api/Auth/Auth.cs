@@ -62,6 +62,9 @@ public sealed class HttpTenantContext(IHttpContextAccessor accessor) : ITenantCo
 {
     public Guid? TenantId =>
         Guid.TryParse(accessor.HttpContext?.User.FindFirstValue(JangnaClaims.TenantId), out var id) ? id : null;
+
+    public Guid? UserId =>
+        Guid.TryParse(accessor.HttpContext?.User.FindFirstValue(JwtRegisteredClaimNames.Sub), out var id) ? id : null;
 }
 
 public static class ClaimsPrincipalExtensions

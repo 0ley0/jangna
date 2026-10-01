@@ -17,8 +17,18 @@ var config = builder.Configuration;
 
 builder.Services.AddOpenApi();
 builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(o =>
+{
+    // dev เท่านั้น: แนบ exception ใน 500 เพื่อ debug ง่าย
+    if (builder.Environment.IsDevelopment())
+        o.CustomizeProblemDetails = c =>
+        {
+            if (c.HttpContext.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error is { } error)
+                c.ProblemDetails.Detail = error.ToString();
+        };
+});
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<Jangna.Api.PayRuns.PayRunService>();
 
 // Persistence + tenancy
 builder.Services.AddHttpContextAccessor();
@@ -93,7 +103,9 @@ app.MapGroup("/api")
     .MapOrgEndpoints()
     .MapEmployeeEndpoints()
     .MapLiffEndpoints()
-    .MapLegalEndpoints();
+    .MapLegalEndpoints()
+    .MapWorkEndpoints()
+    .MapPayRunEndpoints();
 
 app.Run();
 

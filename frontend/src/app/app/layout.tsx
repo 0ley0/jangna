@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 const nav = [
   { href: "/app", label: "ภาพรวม" },
   { href: "/app/employees", label: "พนักงาน" },
+  { href: "/app/work", label: "บันทึกงาน" },
+  { href: "/app/pay-runs", label: "รอบจ่าย" },
+  { href: "/app/holidays", label: "วันหยุด" },
   { href: "/app/branches", label: "สาขา" },
 ];
 

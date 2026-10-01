@@ -20,7 +20,7 @@ public enum EmployeeStatus
     Inactive,
 }
 
-public sealed class Employee : TenantEntity
+public sealed class Employee : TenantEntity, IAudited
 {
     public required string FirstName { get; set; }
     public string LastName { get; set; } = "";

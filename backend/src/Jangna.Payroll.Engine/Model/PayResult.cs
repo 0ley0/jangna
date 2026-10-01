@@ -40,6 +40,7 @@ public sealed record PayLine(
 public sealed record PayResult(
     IReadOnlyList<PayLine> Lines,
     decimal Gross,
+    decimal TaxableIncome,
     decimal SocialSecurityEmployee,
     decimal SocialSecurityEmployer,
     decimal SocialSecurityWage,

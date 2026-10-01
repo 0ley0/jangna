@@ -235,7 +235,7 @@ public static class PayrollCalculator
         if (gross < 0) ctx.Warn("ยอดเงินได้ติดลบ — ตรวจวันขาดงาน/รายการหัก");
 
         return new PayResult(
-            ctx.Lines, Round(gross), sso, sso, Round(Math.Max(0, ssoWage)), wht, advance, carried,
+            ctx.Lines, Round(gross), input.Employee.IsFreelance ? 0 : Round(taxable), sso, sso, Round(Math.Max(0, ssoWage)), wht, advance, carried,
             Round(beforeAdvance - advance), ctx.Warnings);
     }
 

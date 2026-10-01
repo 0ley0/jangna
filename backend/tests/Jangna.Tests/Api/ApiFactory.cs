@@ -30,6 +30,18 @@ public sealed class ApiFactory : WebApplicationFactory<Program>
             services.AddDbContext<JangnaDbContext>(o => o.UseInMemoryDatabase(_dbName));
         });
 
+    /// <summary>MigrateOnStartup ถูกปิด → seed ข้อมูลกฎหมายเองหลังสร้าง host</summary>
+    protected override Microsoft.Extensions.Hosting.IHost CreateHost(Microsoft.Extensions.Hosting.IHostBuilder builder)
+    {
+        var host = base.CreateHost(builder);
+        using var scope = host.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<JangnaDbContext>();
+        Jangna.Infrastructure.Seed.LegalDataSeeder
+            .SeedAsync(db, Path.Combine(AppContext.BaseDirectory, "Seed", "minimum-wages.draft.json"))
+            .GetAwaiter().GetResult();
+        return host;
+    }
+
     public async Task<HttpClient> RegisterShopAsync(string shop, string email)
     {
         var client = CreateClient();
