@@ -1,0 +1,35 @@
+{
+  "source": "https://cloud-ta.com/minimum-wage-by-region-thailand/ (สรุปจากบทความ ไม่ใช่ประกาศราชกิจจาฯ)",
+  "effectiveFrom": "2025-07-01",
+  "verified": false,
+  "notes": [
+    "DRAFT: ต้องตรวจกับประกาศคณะกรรมการค่าจ้างฉบับจริงก่อนใช้จ่ายเงินจริง",
+    "บทความระบุ Prachuap Khiri Khan ซ้ำ 2 ระดับ (352 และ 357) — ตีความว่าระดับ 357 คือ Prachin Buri (TH-25) เพราะนับครบ 77 จังหวัดพอดี",
+    "วันที่มีผลในบทความไม่ชัด (อ้าง 1 ก.ค. 2568) — ตรวจว่ามีประกาศใหม่ปี 2569 หรือไม่",
+    "AreaCode ใช้รหัสอำเภอของกรมการปกครอง (4 หลัก)",
+    "ยังไม่รวมอัตราตามประเภทกิจการ (โรงแรม/สถานบริการ 400 บาททั่วประเทศ)"
+  ],
+  "tiers": [
+    { "rate": 337, "provinces": ["TH-96", "TH-94", "TH-95"] },
+    { "rate": 345, "provinces": ["TH-92", "TH-55", "TH-56", "TH-54"] },
+    { "rate": 347, "provinces": ["TH-62", "TH-66", "TH-44", "TH-58", "TH-85", "TH-70", "TH-52", "TH-42", "TH-33", "TH-91", "TH-64", "TH-39", "TH-37", "TH-41", "TH-53", "TH-61"] },
+    { "rate": 348, "provinces": ["TH-18", "TH-36", "TH-93", "TH-17", "TH-15"] },
+    { "rate": 349, "provinces": ["TH-46", "TH-80", "TH-38", "TH-67", "TH-45"] },
+    { "rate": 350, "provinces": ["TH-60", "TH-35", "TH-51"] },
+    { "rate": 351, "provinces": ["TH-86", "TH-76", "TH-32"] },
+    { "rate": 352, "provinces": ["TH-71", "TH-22", "TH-57", "TH-63", "TH-48", "TH-31", "TH-77", "TH-82", "TH-65", "TH-49", "TH-47", "TH-90", "TH-27", "TH-84", "TH-34"] },
+    { "rate": 354, "provinces": ["TH-81", "TH-23"] },
+    { "rate": 355, "provinces": ["TH-26", "TH-72", "TH-43"] },
+    { "rate": 356, "provinces": ["TH-16"] },
+    { "rate": 357, "provinces": ["TH-40", "TH-50", "TH-25", "TH-14", "TH-19"] },
+    { "rate": 358, "provinces": ["TH-75"] },
+    { "rate": 359, "provinces": ["TH-30"] },
+    { "rate": 372, "provinces": ["TH-73", "TH-12", "TH-13", "TH-11", "TH-74"] },
+    { "rate": 400, "provinces": ["TH-10", "TH-24", "TH-20", "TH-83", "TH-21"] }
+  ],
+  "areas": [
+    { "province": "TH-50", "area": "5001", "name": "อ.เมืองเชียงใหม่", "rate": 380 },
+    { "province": "TH-90", "area": "9011", "name": "อ.หาดใหญ่", "rate": 380 },
+    { "province": "TH-84", "area": "8404", "name": "อ.เกาะสมุย", "rate": 400 }
+  ]
+}

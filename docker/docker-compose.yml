@@ -1,0 +1,26 @@
+# Dev only — production ใช้ Neon (Postgres) + managed Redis
+name: jangna
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: jangna
+      POSTGRES_USER: jangna
+      POSTGRES_PASSWORD: jangna
+    ports:
+      - "5433:5432"   # 5433 กันชนกับ Postgres ที่อาจลงไว้ในเครื่อง
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jangna"]
+      interval: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+
+volumes:
+  pgdata:

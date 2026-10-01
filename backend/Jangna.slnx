@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jangna.Api/Jangna.Api.csproj" />
+    <Project Path="src/Jangna.Core/Jangna.Core.csproj" />
+    <Project Path="src/Jangna.Infrastructure/Jangna.Infrastructure.csproj" />
+    <Project Path="src/Jangna.Payroll.Engine/Jangna.Payroll.Engine.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Jangna.Tests/Jangna.Tests.csproj" />
+  </Folder>
+</Solution>
