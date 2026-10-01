@@ -3,13 +3,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FormError } from "@/components/field";
+import { DateField } from "@/components/date-picker";
+import { FormError, TextField } from "@/components/ui/form-field";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, ApiError } from "@/lib/api";
-import { baht, daysInMonth, isoDate, thaiDate } from "@/lib/format";
+import { baht, daysInMonth, fmtDate, isoDate } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import type { Employee, PieceWork } from "@/lib/types";
 
 export function PieceWorkPanel({ employee, year, month }: { employee: Employee; year: number; month: number }) {
+  const { t, lang } = useLang();
   const queryClient = useQueryClient();
   const from = isoDate(year, month, 1);
   const to = isoDate(year, month, daysInMonth(year, month));
@@ -48,25 +51,25 @@ export function PieceWorkPanel({ employee, year, month }: { employee: Employee; 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ผลงานต่อชิ้น</CardTitle>
+        <CardTitle>{t("ผลงานต่อชิ้น", "Piece work")}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <form action={(f) => add.mutate(f)} className="grid items-end gap-3 sm:grid-cols-6">
           <div className="sm:col-span-6">
             <FormError message={add.error?.message ?? remove.error?.message} />
           </div>
-          <Field label="วันที่" name="date" type="date" min={from} max={to} defaultValue={defaultDate} required />
+          <DateField label={t("วันที่", "Date")} name="date" min={from} max={to} defaultValue={defaultDate} required />
           <div className="sm:col-span-2">
-            <Field label="งาน" name="description" defaultValue="แพ็คกล่อง" required />
+            <TextField label={t("งาน", "Task")} name="description" defaultValue={t("แพ็คกล่อง", "Packing")} required />
           </div>
-          <Field label="จำนวน" name="quantity" type="number" min={1} step="1" required />
-          <Field label="บาท/ชิ้น" name="rate" type="number" min={0} step="0.01" defaultValue={5} required />
+          <TextField label={t("จำนวน", "Quantity")} name="quantity" type="number" min={1} step="1" required />
+          <TextField label={t("บาท/ชิ้น", "THB/piece")} name="rate" type="number" min={0} step="0.01" defaultValue={5} required />
           <label className="flex h-9 items-center gap-2 text-sm">
-            <input type="checkbox" name="overtime" /> นอกเวลา (OT)
+            <input type="checkbox" name="overtime" /> {t("นอกเวลา (OT)", "Overtime (OT)")}
           </label>
           <div className="sm:col-span-6">
-            <Button type="submit" disabled={add.isPending}>
-              เพิ่มผลงาน
+            <Button type="submit" loading={add.isPending}>
+              {t("เพิ่มผลงาน", "Add entry")}
             </Button>
           </div>
         </form>
@@ -74,18 +77,18 @@ export function PieceWorkPanel({ employee, year, month }: { employee: Employee; 
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>วันที่</TableHead>
-              <TableHead>งาน</TableHead>
-              <TableHead className="text-right">จำนวน</TableHead>
-              <TableHead className="text-right">อัตรา</TableHead>
-              <TableHead className="text-right">ประมาณ</TableHead>
+              <TableHead>{t("วันที่", "Date")}</TableHead>
+              <TableHead>{t("งาน", "Task")}</TableHead>
+              <TableHead className="text-right">{t("จำนวน", "Qty")}</TableHead>
+              <TableHead className="text-right">{t("อัตรา", "Rate")}</TableHead>
+              <TableHead className="text-right">{t("ประมาณ", "Est.")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
           <TableBody>
             {entries.data?.map((e) => (
               <TableRow key={e.id}>
-                <TableCell>{thaiDate(e.date)}</TableCell>
+                <TableCell>{fmtDate(e.date, lang)}</TableCell>
                 <TableCell>
                   {e.description}
                   {e.overtime && <span className="text-muted-foreground"> (OT ×1.5)</span>}
@@ -95,13 +98,13 @@ export function PieceWorkPanel({ employee, year, month }: { employee: Employee; 
                 <TableCell className="text-right">{baht(e.quantity * e.rate * (e.overtime ? 1.5 : 1))}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => remove.mutate(e.id)}>
-                    ลบ
+                    {t("ลบ", "Delete")}
                   </Button>
                 </TableCell>
               </TableRow>
             ))}
             <TableRow className="font-medium">
-              <TableCell colSpan={4}>รวม (ยังไม่รวมเติมขั้นต่ำ/ตัวคูณวันหยุด)</TableCell>
+              <TableCell colSpan={4}>{t("รวม (ยังไม่รวมเติมขั้นต่ำ/ตัวคูณวันหยุด)", "Total (before min-wage top-up / holiday multipliers)")}</TableCell>
               <TableCell className="text-right">{baht(total)}</TableCell>
               <TableCell />
             </TableRow>

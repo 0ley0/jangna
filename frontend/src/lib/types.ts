@@ -65,18 +65,21 @@ export interface MinimumWageRate {
   verified: boolean;
 }
 
-export const payTypeLabels: Record<PayType, string> = {
-  Monthly: "รายเดือน",
-  Daily: "รายวัน",
-  Hourly: "รายชั่วโมง",
-  Piece: "ต่อชิ้น/กล่อง",
+/** ข้อความสองภาษา [ไทย, อังกฤษ] — ใช้กับ t(...label) จาก useLang() */
+export type Bi = [th: string, en: string];
+
+export const payTypeLabels: Record<PayType, Bi> = {
+  Monthly: ["รายเดือน", "Monthly"],
+  Daily: ["รายวัน", "Daily"],
+  Hourly: ["รายชั่วโมง", "Hourly"],
+  Piece: ["ต่อชิ้น/กล่อง", "Per piece"],
 };
 
-export const payTypeUnit: Record<PayType, string> = {
-  Monthly: "บาท/เดือน",
-  Daily: "บาท/วัน",
-  Hourly: "บาท/ชม.",
-  Piece: "บาท/วัน (ขั้นต่ำ ถ้ามี)",
+export const payTypeUnit: Record<PayType, Bi> = {
+  Monthly: ["บาท/เดือน", "THB/month"],
+  Daily: ["บาท/วัน", "THB/day"],
+  Hourly: ["บาท/ชม.", "THB/hour"],
+  Piece: ["บาท/วัน (ขั้นต่ำ ถ้ามี)", "THB/day (base, optional)"],
 };
 
 export type DayKind = "Workday" | "WeeklyHoliday" | "PublicHoliday";
@@ -176,14 +179,41 @@ export interface PayRunDetail {
   items: PayRunItem[];
 }
 
-export const dayKindLabels: Record<DayKind, string> = {
-  Workday: "วันทำงาน",
-  WeeklyHoliday: "วันหยุดประจำสัปดาห์",
-  PublicHoliday: "วันหยุดนักขัตฤกษ์",
+export const dayKindLabels: Record<DayKind, Bi> = {
+  Workday: ["วันทำงาน", "Workday"],
+  WeeklyHoliday: ["วันหยุดประจำสัปดาห์", "Weekly day off"],
+  PublicHoliday: ["วันหยุดนักขัตฤกษ์", "Public holiday"],
 };
 
-export const leaveLabels: Record<LeaveKind, string> = {
-  None: "—",
-  Paid: "ลา (ได้ค่าจ้าง)",
-  Unpaid: "ลา (ไม่ได้ค่าจ้าง)",
+export const leaveLabels: Record<LeaveKind, Bi> = {
+  None: ["—", "—"],
+  Paid: ["ลา (ได้ค่าจ้าง)", "Leave (paid)"],
+  Unpaid: ["ลา (ไม่ได้ค่าจ้าง)", "Leave (unpaid)"],
+};
+
+export const roleLabels: Record<Role, Bi> = {
+  Owner: ["เจ้าของร้าน", "Owner"],
+  Manager: ["ผู้จัดการ", "Manager"],
+  Staff: ["พนักงาน", "Staff"],
+};
+
+/** ชื่อรายการในสลิปตามรหัสจาก payroll engine (description จาก backend เป็นภาษาไทย) */
+export const payLineLabels: Record<string, Bi> = {
+  SALARY: ["เงินเดือน", "Salary"],
+  UNPAID_ABSENCE: ["หักวันขาด/ลาไม่รับค่าจ้าง", "Unpaid absence"],
+  DAILY_WAGE: ["ค่าจ้างรายวัน", "Daily wage"],
+  HOURLY_WAGE: ["ค่าจ้างรายชั่วโมง", "Hourly wage"],
+  PIECE: ["ค่าจ้างต่อชิ้น", "Piece rate"],
+  PIECE_OT: ["ค่าจ้างต่อชิ้น (OT)", "Piece rate (OT)"],
+  PIECE_HOLIDAY: ["ค่าจ้างต่อชิ้น (วันหยุด)", "Piece rate (holiday)"],
+  PIECE_HOLIDAY_OT: ["ค่าจ้างต่อชิ้น (OT วันหยุด)", "Piece rate (holiday OT)"],
+  OT: ["ค่าล่วงเวลา", "Overtime"],
+  HOLIDAY_WORK: ["ค่าทำงานวันหยุด", "Holiday work"],
+  HOLIDAY_OT: ["ค่าล่วงเวลาวันหยุด", "Holiday overtime"],
+  PUBLIC_HOLIDAY: ["ค่าจ้างวันหยุดนักขัตฤกษ์", "Public holiday pay"],
+  PAID_LEAVE: ["ลาได้รับค่าจ้าง", "Paid leave"],
+  MIN_WAGE_TOPUP: ["เติมให้ถึงค่าแรงขั้นต่ำ", "Minimum wage top-up"],
+  SSO: ["ประกันสังคม", "Social security"],
+  WHT: ["ภาษีหัก ณ ที่จ่าย", "Withholding tax"],
+  ADVANCE: ["หักเงินเบิกล่วงหน้า", "Advance deduction"],
 };

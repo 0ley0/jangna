@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FormError } from "@/components/field";
+import { FormError, TextField } from "@/components/ui/form-field";
 import { api, ApiError, setToken } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 import type { AuthResponse } from "@/lib/types";
 
 export default function LoginPage() {
+  const { t } = useLang();
   const router = useRouter();
   const login = useMutation<AuthResponse, ApiError, FormData>({
     mutationFn: (form) =>
@@ -26,20 +28,20 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>เข้าสู่ระบบ</CardTitle>
+        <CardTitle>{t("เข้าสู่ระบบ", "Log in")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form action={(form) => login.mutate(form)} className="grid gap-4">
           <FormError message={login.error?.message} />
-          <Field label="อีเมล" name="email" type="email" autoComplete="email" required />
-          <Field label="รหัสผ่าน" name="password" type="password" autoComplete="current-password" required />
-          <Button type="submit" disabled={login.isPending}>
-            {login.isPending ? "กำลังเข้าสู่ระบบ…" : "เข้าสู่ระบบ"}
+          <TextField label={t("อีเมล", "Email")} name="email" type="email" autoComplete="email" required />
+          <TextField label={t("รหัสผ่าน", "Password")} name="password" type="password" autoComplete="current-password" required />
+          <Button type="submit" loading={login.isPending}>
+            {login.isPending ? t("กำลังเข้าสู่ระบบ…", "Logging in…") : t("เข้าสู่ระบบ", "Log in")}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            ยังไม่มีบัญชี?{" "}
-            <Link href="/register" className="text-primary underline-offset-4 hover:underline">
-              สมัครใช้ฟรี
+            {t("ยังไม่มีบัญชี?", "No account yet?")}{" "}
+            <Link href="/register" className="text-brand-strong underline-offset-4 hover:underline">
+              {t("สมัครใช้ฟรี", "Sign up free")}
             </Link>
           </p>
         </form>

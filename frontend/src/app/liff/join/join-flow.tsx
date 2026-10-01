@@ -5,8 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FormError } from "@/components/field";
+import { FormError, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 
 const LIFF_ID = process.env.NEXT_PUBLIC_LIFF_ID;
 
@@ -31,6 +32,7 @@ async function getLineIdToken(): Promise<string | null> {
 }
 
 export function JoinFlow() {
+  const { t } = useLang();
   const code = useSearchParams().get("code") ?? "";
   const [devName, setDevName] = useState("");
 
@@ -49,42 +51,44 @@ export function JoinFlow() {
     },
   });
 
-  if (!code) return <Message title="ลิงก์ไม่ครบ" body="กรุณาเปิดจากลิงก์ที่ร้านส่งให้ใน LINE" />;
-  if (preview.isPending) return <p className="text-center text-muted-foreground">กำลังตรวจลิงก์…</p>;
-  if (preview.isError) return <Message title="ใช้ลิงก์นี้ไม่ได้" body={preview.error.message} />;
+  if (!code) return <Message title={t("ลิงก์ไม่ครบ", "Incomplete link")} body={t("กรุณาเปิดจากลิงก์ที่ร้านส่งให้ใน LINE", "Please open the link your shop sent you in LINE")} />;
+  if (preview.isPending) return <p className="text-center text-muted-foreground">{t("กำลังตรวจลิงก์…", "Checking link…")}</p>;
+  if (preview.isError) return <Message title={t("ใช้ลิงก์นี้ไม่ได้", "This link can't be used")} body={preview.error.message} />;
   if (join.data)
     return (
       <Message
-        title="ผูก LINE สำเร็จ 🎉"
-        body={`${join.data.employeeName} เชื่อมกับร้าน ${join.data.shopName} แล้ว ต่อไปจะได้รับตารางงานและสลิปเงินเดือนทาง LINE`}
+        title={t("ผูก LINE สำเร็จ 🎉", "LINE connected 🎉")}
+        body={t(
+          `${join.data.employeeName} เชื่อมกับร้าน ${join.data.shopName} แล้ว ต่อไปจะได้รับตารางงานและสลิปเงินเดือนทาง LINE`,
+          `${join.data.employeeName} is now connected to ${join.data.shopName}. You'll get your schedule and payslips in LINE.`,
+        )}
       />
     );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ร้าน {preview.data.shopName} เชิญคุณ</CardTitle>
+        <CardTitle>{t(`ร้าน ${preview.data.shopName} เชิญคุณ`, `${preview.data.shopName} invited you`)}</CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <p className="text-muted-foreground">
-          สวัสดี {preview.data.employeeName} กดปุ่มด้านล่างเพื่อผูกบัญชี LINE ของคุณกับร้าน ใช้สำหรับลงเวลา ดูตารางงาน และรับสลิปเงินเดือน
+          {t(
+            `สวัสดี ${preview.data.employeeName} กดปุ่มด้านล่างเพื่อผูกบัญชี LINE ของคุณกับร้าน ใช้สำหรับลงเวลา ดูตารางงาน และรับสลิปเงินเดือน`,
+            `Hi ${preview.data.employeeName}, tap below to connect your LINE account to the shop — for clocking in, viewing your schedule and getting payslips.`,
+          )}
         </p>
         <FormError message={join.error?.message} />
         {!LIFF_ID && (
-          <Field
-            label="(โหมดทดสอบ) ชื่อบัญชี LINE จำลอง"
+          <TextField
+            label={t("(โหมดทดสอบ) ชื่อบัญชี LINE จำลอง", "(Test mode) mock LINE account name")}
             name="devName"
             value={devName}
             onChange={(e) => setDevName(e.target.value)}
-            placeholder="เช่น somchai"
+            placeholder={t("เช่น somchai", "e.g. somchai")}
           />
         )}
-        <Button
-          size="lg"
-          onClick={() => join.mutate()}
-          disabled={join.isPending || (!LIFF_ID && !devName.trim())}
-        >
-          {join.isPending ? "กำลังผูก…" : "ผูกบัญชี LINE"}
+        <Button size="lg" variant="accent" onClick={() => join.mutate()} disabled={join.isPending || (!LIFF_ID && !devName.trim())}>
+          {join.isPending ? t("กำลังผูก…", "Connecting…") : t("ผูกบัญชี LINE", "Connect LINE")}
         </Button>
       </CardContent>
     </Card>

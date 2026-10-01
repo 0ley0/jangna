@@ -6,15 +6,17 @@ import { Fragment, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormError } from "@/components/field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FormError } from "@/components/ui/form-field";
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, ApiError } from "@/lib/api";
-import { baht, thaiDate } from "@/lib/format";
+import { baht, fmtDate, fmtDateTime } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import { useMe } from "@/lib/queries";
-import { payTypeLabels, type PayRunDetail } from "@/lib/types";
+import { payLineLabels, payTypeLabels, type PayLine, type PayRunDetail } from "@/lib/types";
 
 export default function PayRunPage() {
   const { id } = useParams<{ id: string }>();
+  const { t, lang } = useLang();
   const router = useRouter();
   const queryClient = useQueryClient();
   const me = useMe();
@@ -45,7 +47,7 @@ export default function PayRunPage() {
     },
   });
 
-  if (!run.data) return <p className="text-muted-foreground">{run.error?.message ?? "กำลังโหลด…"}</p>;
+  if (!run.data) return <p className="text-muted-foreground">{run.error?.message ?? t("กำลังโหลด…", "Loading…")}</p>;
   const { summary, items } = run.data;
   const draft = summary.status === "Draft";
   const totals = items.reduce(
@@ -62,23 +64,23 @@ export default function PayRunPage() {
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-2xl font-semibold">
-          รอบ {thaiDate(summary.periodStart)} – {thaiDate(summary.periodEnd)}
+          {t("รอบ", "Pay run")} {fmtDate(summary.periodStart, lang)} – {fmtDate(summary.periodEnd, lang)}
         </h1>
-        {draft ? <Badge variant="outline">ร่าง</Badge> : <Badge>ปิดรอบแล้ว</Badge>}
+        {draft ? <Badge variant="outline">{t("ร่าง", "Draft")}</Badge> : <Badge variant="success">{t("ปิดรอบแล้ว", "Locked")}</Badge>}
         {draft && (
           <div className="ml-auto flex gap-2">
             <Button variant="outline" onClick={() => recalc.mutate()} disabled={recalc.isPending}>
-              คำนวณใหม่
+              {t("คำนวณใหม่", "Recalculate")}
             </Button>
-            <Button variant="ghost" onClick={() => confirm("ลบรอบร่างนี้?") && remove.mutate()}>
-              ลบ
+            <Button variant="ghost" onClick={() => confirm(t("ลบรอบร่างนี้?", "Delete this draft pay run?")) && remove.mutate()}>
+              {t("ลบ", "Delete")}
             </Button>
             {me.data?.role === "Owner" && (
               <Button
-                onClick={() => confirm("ปิดรอบแล้วจะแก้ข้อมูลในช่วงวันนี้ไม่ได้อีก ยืนยัน?") && lock.mutate()}
+                onClick={() => confirm(t("ปิดรอบแล้วจะแก้ข้อมูลในช่วงวันนี้ไม่ได้อีก ยืนยัน?", "Once locked, work data in this period can no longer be edited. Continue?")) && lock.mutate()}
                 disabled={lock.isPending || items.length === 0}
               >
-                ปิดรอบ
+                {t("ปิดรอบ", "Lock pay run")}
               </Button>
             )}
           </div>
@@ -88,28 +90,29 @@ export default function PayRunPage() {
       <FormError message={recalc.error?.message ?? lock.error?.message ?? remove.error?.message} />
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Stat label="รวมเงินได้" value={baht(summary.gross)} />
-        <Stat label="จ่ายสุทธิ" value={baht(summary.net)} />
-        <Stat label="ประกันสังคม (ลูกจ้าง + นายจ้าง)" value={baht(totals.sso + totals.ssoEmployer)} />
-        <Stat label="ภาษีหัก ณ ที่จ่าย" value={baht(totals.wht)} />
+        <Stat label={t("รวมเงินได้", "Gross pay")} value={baht(summary.gross)} />
+        <Stat label={t("จ่ายสุทธิ", "Net pay")} value={baht(summary.net)} />
+        <Stat label={t("ประกันสังคม (ลูกจ้าง + นายจ้าง)", "Social security (employee + employer)")} value={baht(totals.sso + totals.ssoEmployer)} />
+        <Stat label={t("ภาษีหัก ณ ที่จ่าย", "Withholding tax")} value={baht(totals.wht)} />
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-normal text-muted-foreground">
-            คำนวณเมื่อ {new Date(summary.calculatedAt).toLocaleString("th-TH")} · ใช้กฎหมายชุดวันที่ {thaiDate(run.data.ruleSetEffectiveFrom)}
+            {t("คำนวณเมื่อ", "Calculated")} {fmtDateTime(summary.calculatedAt, lang)} · {t("ใช้กฎหมายชุดวันที่", "Legal rules effective")}{" "}
+            {fmtDate(run.data.ruleSetEffectiveFrom, lang)}
           </CardTitle>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>พนักงาน</TableHead>
-                <TableHead className="text-right">เงินได้</TableHead>
-                <TableHead className="text-right">สปส.</TableHead>
-                <TableHead className="text-right">ภาษี</TableHead>
-                <TableHead className="text-right">หักเบิก</TableHead>
-                <TableHead className="text-right">สุทธิ</TableHead>
+                <TableHead>{t("พนักงาน", "Employee")}</TableHead>
+                <TableHead className="text-right">{t("เงินได้", "Gross")}</TableHead>
+                <TableHead className="text-right">{t("สปส.", "SSO")}</TableHead>
+                <TableHead className="text-right">{t("ภาษี", "Tax")}</TableHead>
+                <TableHead className="text-right">{t("หักเบิก", "Advance")}</TableHead>
+                <TableHead className="text-right">{t("สุทธิ", "Net")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -119,11 +122,11 @@ export default function PayRunPage() {
                     <TableCell>
                       <span className="font-medium">{i.employeeName}</span>
                       <span className="text-muted-foreground">
-                        {" "}· {payTypeLabels[i.payType]}
-                        {i.isFreelance && " · ฟรีแลนซ์"}
+                        {" "}· {t(...payTypeLabels[i.payType])}
+                        {i.isFreelance && ` · ${t("ฟรีแลนซ์", "Freelance")}`}
                       </span>
                       {i.warnings.length > 0 && (
-                        <Badge variant="outline" className="ml-2 border-amber-500 text-amber-600">
+                        <Badge variant="warning" className="ml-2">
                           ⚠ {i.warnings.length}
                         </Badge>
                       )}
@@ -141,7 +144,7 @@ export default function PayRunPage() {
                           <ul className="grid gap-1 text-sm">
                             {i.lines.map((l, n) => (
                               <li key={n} className="flex justify-between gap-4">
-                                <span>{l.description}</span>
+                                <span>{lang === "en" ? englishLine(l) : l.description}</span>
                                 <span className={l.kind === "Deduction" ? "text-destructive" : ""}>
                                   {l.kind === "Deduction" ? "−" : ""}
                                   {baht(l.amount)}
@@ -150,10 +153,13 @@ export default function PayRunPage() {
                             ))}
                           </ul>
                           {i.warnings.length > 0 && (
-                            <ul className="grid gap-1 text-sm text-amber-700 dark:text-amber-400">
+                            <ul className="grid gap-1 text-sm text-amber-ink">
                               {i.warnings.map((w) => (
                                 <li key={w}>⚠ {w}</li>
                               ))}
+                              {lang === "en" && (
+                                <li className="text-xs text-muted-foreground">Warnings are shown in Thai for now.</li>
+                              )}
                             </ul>
                           )}
                         </div>
@@ -163,11 +169,12 @@ export default function PayRunPage() {
                 </Fragment>
               ))}
               {items.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    ไม่มีพนักงานที่ต้องจ่ายในรอบนี้ — บันทึกวันทำงาน/ผลงานก่อน แล้วกดคำนวณใหม่
-                  </TableCell>
-                </TableRow>
+                <TableEmpty colSpan={6}>
+                    {t(
+                      "ไม่มีพนักงานที่ต้องจ่ายในรอบนี้ — บันทึกวันทำงาน/ผลงานก่อน แล้วกดคำนวณใหม่",
+                      "Nobody to pay in this period — log work days or piece work first, then recalculate",
+                    )}
+                  </TableEmpty>
               )}
             </TableBody>
           </Table>
@@ -186,4 +193,11 @@ function Stat({ label, value }: { label: string; value: string }) {
       <CardContent className="text-2xl font-semibold">{value}</CardContent>
     </Card>
   );
+}
+
+/** ชื่อรายการภาษาอังกฤษจากรหัส + วันที่ (dd/MM) ท้าย description เดิมถ้ามี */
+function englishLine(l: PayLine) {
+  const label = payLineLabels[l.code]?.[1] ?? l.description;
+  const date = l.description.match(/(\d{2}\/\d{2})$/)?.[1];
+  return date ? `${label} ${date}` : label;
 }

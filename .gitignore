@@ -16,3 +16,6 @@ out/
 .DS_Store
 Thumbs.db
 .idea/
+
+# ดีไซน์ต้นฉบับแบบ offline (~2MB ต่อไฟล์) — มีไฟล์ src อยู่แล้ว
+powerd_bese_desinge/*(offline).html

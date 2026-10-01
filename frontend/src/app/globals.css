@@ -2,12 +2,18 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/*
+ * Theme: Hearth (powerd_bese_desinge/Hearth.html) — ครีม เบจ หมึก เทอร์ราคอตต้า
+ * สี shadcn (primary, muted, border ...) ถูก map ไปที่ palette ของ Hearth
+ * สีเพิ่ม: brand (เทอร์ราคอตต้า), surface (การ์ด), sage/plum/amber (แท็ก)
+ */
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-noto-sans-thai);
+  --font-sans: var(--font-noto-sans-thai), ui-sans-serif, system-ui, sans-serif;
   --font-mono: ui-monospace, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -39,6 +45,30 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+
+  /* Hearth extras */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-surface: var(--surface);
+  --color-cream-2: var(--cream-2);
+  --color-beige-2: var(--beige-2);
+  --color-ink-2: var(--ink-2);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-sage-ink: var(--sage-ink);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-amber-ink: var(--amber-ink);
+  --color-plum: var(--plum);
+  --color-brand-ink: var(--brand-ink);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 8px 24px -12px rgba(74, 64, 54, 0.1);
+  --shadow-pop: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 18px 40px -20px rgba(74, 64, 54, 0.18);
+  --shadow-ink: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 14px -6px rgba(42, 37, 32, 0.45);
+  --shadow-brand: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -8px rgba(201, 123, 93, 0.55);
+
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -46,75 +76,112 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+
+  --animate-pop-in: pop-in 0.18s ease-out;
+  --animate-fade-up: fade-up 0.35s ease-out;
+}
+
+@keyframes pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.56 0.15 152);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --background: #faf6ef;      /* cream */
+  --foreground: #2a2520;      /* ink */
+  --card: #fffdf8;
+  --card-foreground: #2a2520;
+  --popover: #fffdf8;
+  --popover-foreground: #2a2520;
+  --primary: #2a2520;         /* ปุ่มหลักของ Hearth = สีหมึก */
+  --primary-foreground: #faf6ef;
+  --secondary: #f3ead9;       /* beige */
+  --secondary-foreground: #2a2520;
+  --muted: #f3ead9;
+  --muted-foreground: #8b7a66;
+  --accent: #f3ead9;
+  --accent-foreground: #2a2520;
+  --destructive: #b5473a;
+  --border: #e6d9bf;          /* hairline */
+  --input: #e6d9bf;
+  --ring: #c97b5d;
+  --chart-1: #c97b5d;
+  --chart-2: #8fa284;
+  --chart-3: #d4a256;
+  --chart-4: #9a6b7e;
+  --chart-5: #7a8fa5;
+  --radius: 0.75rem;
+  --sidebar: #f6f0e4;         /* cream-2 */
+  --sidebar-foreground: #4a4036;
+  --sidebar-primary: #2a2520;
+  --sidebar-primary-foreground: #faf6ef;
+  --sidebar-accent: #fffdf8;
+  --sidebar-accent-foreground: #2a2520;
+  --sidebar-border: #e6d9bf;
+  --sidebar-ring: #c97b5d;
+
+  --brand: #c97b5d;           /* terracotta */
+  --brand-strong: #b86949;
+  --brand-soft: #fbe6d7;
+  --brand-ink: #8e4a30;
+  --brand-foreground: #fff8ee;
+  --surface: #fffdf8;
+  --cream-2: #f6f0e4;
+  --beige-2: #ebdfc7;
+  --ink-2: #4a4036;
+  --sage: #8fa284;
+  --sage-soft: #e3ebdb;
+  --sage-ink: #4b5c42;
+  --amber: #d4a256;
+  --amber-soft: #f4e6c7;
+  --amber-ink: #7a5a1d;
+  --plum: #9a6b7e;
 }
 
+/* Hearth "dusk" */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.16 152);
-  --primary-foreground: oklch(0.18 0.03 152);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #2b2620;
+  --foreground: #f4ecdc;
+  --card: #322c25;
+  --card-foreground: #f4ecdc;
+  --popover: #322c25;
+  --popover-foreground: #f4ecdc;
+  --primary: #f4ecdc;
+  --primary-foreground: #2b2620;
+  --secondary: #3a332b;
+  --secondary-foreground: #f4ecdc;
+  --muted: #3a332b;
+  --muted-foreground: #9f8e78;
+  --accent: #3a332b;
+  --accent-foreground: #f4ecdc;
+  --destructive: #e07a6a;
+  --border: #4a4138;
+  --input: #4a4138;
+  --ring: #c97b5d;
+  --sidebar: #322c25;
+  --sidebar-foreground: #d9ccb5;
+  --sidebar-primary: #f4ecdc;
+  --sidebar-primary-foreground: #2b2620;
+  --sidebar-accent: #3a332b;
+  --sidebar-accent-foreground: #f4ecdc;
+  --sidebar-border: #4a4138;
+  --sidebar-ring: #c97b5d;
+
+  --brand-soft: #4a3329;
+  --brand-ink: #f0b89c;
+  --surface: #322c25;
+  --cream-2: #322c25;
+  --beige-2: #473e33;
+  --ink-2: #d9ccb5;
+  --sage-soft: #34402f;
+  --sage-ink: #c3d3b6;
+  --amber-soft: #463a22;
+  --amber-ink: #ecc98a;
 }
 
 @layer base {
@@ -122,9 +189,38 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+    /* แสงอุ่นจางๆ มุมจอ แบบ .bg-warmth ของ Hearth */
+    background:
+      radial-gradient(800px 400px at 100% -10%, rgba(212, 162, 86, 0.1), transparent 60%),
+      radial-gradient(700px 380px at -5% 110%, rgba(201, 123, 93, 0.08), transparent 55%),
+      var(--background);
+    background-attachment: fixed;
   }
   html {
     @apply font-sans;
   }
+}
+
+@layer components {
+  /* หัว header โปร่งแบบกระจก */
+  .glass {
+    background: color-mix(in srgb, var(--surface) 72%, transparent);
+    backdrop-filter: saturate(140%) blur(12px);
+    -webkit-backdrop-filter: saturate(140%) blur(12px);
+  }
+
+  /* การ์ดไล่สีอุ่น (card-warm) — ใช้กับแถบต้อนรับ/สรุป */
+  .card-warm {
+    background: linear-gradient(180deg, #fbf4e5 0%, #f4e8d0 100%);
+    border: 1px solid #e8d8b4;
+    border-radius: 18px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 28px -16px rgba(184, 105, 73, 0.18);
+  }
+  .dark .card-warm {
+    background: linear-gradient(180deg, #3a3129 0%, #332b23 100%);
+    border-color: #4a4138;
+  }
+
+  .tabular { font-variant-numeric: tabular-nums; }
 }

@@ -5,13 +5,17 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Field, FormError, NativeSelect } from "@/components/field";
+import { ChipGroup } from "@/components/ui/chip";
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FormError, SelectField, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
+import { fmtDateTime } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import { keys, useBranches, useEmployees } from "@/lib/queries";
 import { payTypeLabels, payTypeUnit, type Employee, type Invite, type PayType } from "@/lib/types";
 
 export default function EmployeesPage() {
+  const { t } = useLang();
   const employees = useEmployees();
   const branches = useBranches();
   const queryClient = useQueryClient();
@@ -43,14 +47,22 @@ export default function EmployeesPage() {
   });
 
   const errors = create.error?.fieldErrors;
+  const [filter, setFilter] = useState<PayType | "all">("all");
+  const shown = employees.data?.filter((e) => filter === "all" || e.payType === filter);
+  const filterOptions = [
+    { value: "all" as const, label: t("ทั้งหมด", "All"), count: employees.data?.length },
+    ...(Object.keys(payTypeLabels) as PayType[]).map((p) => ({
+      value: p,
+      label: t(...payTypeLabels[p]),
+      count: employees.data?.filter((e) => e.payType === p).length,
+    })),
+  ];
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">พนักงาน</h1>
-
       <Card>
         <CardHeader>
-          <CardTitle>เพิ่มพนักงาน</CardTitle>
+          <CardTitle>{t("เพิ่มพนักงาน", "Add employee")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -61,37 +73,37 @@ export default function EmployeesPage() {
             <div className="sm:col-span-3">
               <FormError message={errors && Object.keys(errors).length ? null : create.error?.message} />
             </div>
-            <Field label="ชื่อ" name="firstName" errors={errors} required />
-            <Field label="นามสกุล" name="lastName" errors={errors} />
-            <Field label="ชื่อเล่น" name="nickname" errors={errors} />
-            <Field label="เบอร์โทร" name="phone" type="tel" errors={errors} />
-            <NativeSelect label="สาขา" name="branchId" defaultValue="">
-              <option value="">— ไม่ระบุ —</option>
+            <TextField label={t("ชื่อ", "First name")} name="firstName" errors={errors} required />
+            <TextField label={t("นามสกุล", "Last name")} name="lastName" errors={errors} />
+            <TextField label={t("ชื่อเล่น", "Nickname")} name="nickname" errors={errors} />
+            <TextField label={t("เบอร์โทร", "Phone")} name="phone" type="tel" errors={errors} />
+            <SelectField label={t("สาขา", "Branch")} name="branchId" defaultValue="">
+              <option value="">{t("— ไม่ระบุ —", "— None —")}</option>
               {branches.data?.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
                 </option>
               ))}
-            </NativeSelect>
-            <NativeSelect label="ภาษาใน LINE" name="language" defaultValue="th">
+            </SelectField>
+            <SelectField label={t("ภาษาใน LINE", "LINE language")} name="language" defaultValue="th">
               <option value="th">ไทย</option>
               <option value="en">English</option>
-              <option value="my">မြန်မာ (พม่า)</option>
-            </NativeSelect>
-            <NativeSelect
-              label="รูปแบบค่าจ้าง"
+              <option value="my">မြန်မာ ({t("พม่า", "Burmese")})</option>
+            </SelectField>
+            <SelectField
+              label={t("รูปแบบค่าจ้าง", "Pay type")}
               name="payType"
               value={payType}
-              onChange={(e) => setPayType(e.target.value as PayType)}
+              onValueChange={(v) => setPayType(v as PayType)}
             >
-              {Object.entries(payTypeLabels).map(([value, label]) => (
+              {(Object.keys(payTypeLabels) as PayType[]).map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {t(...payTypeLabels[value])}
                 </option>
               ))}
-            </NativeSelect>
-            <Field
-              label={`อัตรา (${payTypeUnit[payType]})`}
+            </SelectField>
+            <TextField
+              label={`${t("อัตรา", "Rate")} (${t(...payTypeUnit[payType])})`}
               name="baseRate"
               type="number"
               min={0}
@@ -99,13 +111,13 @@ export default function EmployeesPage() {
               required={payType !== "Piece"}
               errors={errors}
             />
-            <NativeSelect label="สถานะการจ้าง" name="workerType" defaultValue="Employee">
-              <option value="Employee">ลูกจ้าง (เข้าประกันสังคม)</option>
-              <option value="Freelance">ฟรีแลนซ์ / จ้างทำของ</option>
-            </NativeSelect>
+            <SelectField label={t("สถานะการจ้าง", "Employment type")} name="workerType" defaultValue="Employee">
+              <option value="Employee">{t("ลูกจ้าง (เข้าประกันสังคม)", "Employee (social security)")}</option>
+              <option value="Freelance">{t("ฟรีแลนซ์ / จ้างทำของ", "Freelance / contractor")}</option>
+            </SelectField>
             <div className="sm:col-span-3">
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "กำลังบันทึก…" : "เพิ่มพนักงาน"}
+              <Button type="submit" loading={create.isPending}>
+                {create.isPending ? t("กำลังบันทึก…", "Saving…") : t("เพิ่มพนักงาน", "Add employee")}
               </Button>
             </div>
           </form>
@@ -115,19 +127,20 @@ export default function EmployeesPage() {
       {invite && <InviteCard {...invite} onClose={() => setInvite(null)} />}
 
       <Card>
-        <CardContent>
+        <CardContent className="grid gap-3">
+          <ChipGroup aria-label={t("กรองตามประเภทค่าจ้าง", "Filter by pay type")} options={filterOptions} value={filter} onChange={setFilter} />
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ชื่อ</TableHead>
-                <TableHead>สาขา</TableHead>
-                <TableHead>ค่าจ้าง</TableHead>
+                <TableHead>{t("ชื่อ", "Name")}</TableHead>
+                <TableHead>{t("สาขา", "Branch")}</TableHead>
+                <TableHead>{t("ค่าจ้าง", "Pay")}</TableHead>
                 <TableHead>LINE</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {employees.data?.map((e) => (
+              {shown?.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-medium">
                     {e.firstName} {e.lastName}
@@ -135,30 +148,27 @@ export default function EmployeesPage() {
                   </TableCell>
                   <TableCell>{e.branchName ?? "–"}</TableCell>
                   <TableCell>
-                    {payTypeLabels[e.payType]}
+                    {t(...payTypeLabels[e.payType])}
                     {e.baseRate > 0 && <span className="text-muted-foreground"> · {e.baseRate.toLocaleString("th-TH")}</span>}
                   </TableCell>
                   <TableCell>
-                    {e.lineLinked ? <Badge>ผูกแล้ว</Badge> : <Badge variant="outline">ยังไม่ผูก</Badge>}
+                    {e.lineLinked ? (
+                      <Badge variant="success">{t("ผูกแล้ว", "Linked")}</Badge>
+                    ) : (
+                      <Badge variant="outline">{t("ยังไม่ผูก", "Not linked")}</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => createInvite.mutate(e)}
-                      disabled={createInvite.isPending}
-                    >
-                      {e.lineLinked ? "ผูก LINE ใหม่" : "ส่งลิงก์ผูก LINE"}
+                    <Button variant="outline" size="sm" onClick={() => createInvite.mutate(e)} disabled={createInvite.isPending}>
+                      {e.lineLinked ? t("ผูก LINE ใหม่", "Re-link LINE") : t("ส่งลิงก์ผูก LINE", "Send LINE link")}
                     </Button>
                   </TableCell>
                 </TableRow>
               ))}
-              {employees.data?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
-                    ยังไม่มีพนักงาน
-                  </TableCell>
-                </TableRow>
+              {shown?.length === 0 && (
+                <TableEmpty colSpan={5}>
+                    {t("ยังไม่มีพนักงาน", "No employees yet")}
+                  </TableEmpty>
               )}
             </TableBody>
           </Table>
@@ -169,28 +179,35 @@ export default function EmployeesPage() {
 }
 
 function InviteCard({ employee, invite, onClose }: { employee: Employee; invite: Invite; onClose: () => void }) {
+  const { t, lang } = useLang();
   const [copied, setCopied] = useState(false);
-  const message = `จ้างนะ: กดลิงก์นี้ใน LINE เพื่อผูกบัญชีกับร้าน\n${invite.url}`;
+  // ข้อความที่ส่งให้พนักงานใช้ภาษาที่ตั้งไว้ให้พนักงานคนนั้น ไม่ใช่ภาษาหน้าจอ
+  const message =
+    employee.language === "en"
+      ? `Jangna: open this link in LINE to connect your account to the shop\n${invite.url}`
+      : `จ้างนะ: กดลิงก์นี้ใน LINE เพื่อผูกบัญชีกับร้าน\n${invite.url}`;
   const copy = async () => {
     await navigator.clipboard.writeText(message);
     setCopied(true);
   };
 
   return (
-    <Card className="border-primary">
+    <Card className="border-brand">
       <CardHeader>
-        <CardTitle>ลิงก์ผูก LINE ของ {employee.firstName}</CardTitle>
+        <CardTitle>
+          {t("ลิงก์ผูก LINE ของ", "LINE link for")} {employee.firstName}
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-3">
         <p className="text-sm text-muted-foreground">
-          ส่งลิงก์นี้ให้พนักงานทาง LINE ใช้ได้ครั้งเดียว หมดอายุ{" "}
-          {new Date(invite.expiresAt).toLocaleString("th-TH", { dateStyle: "medium", timeStyle: "short" })}
+          {t("ส่งลิงก์นี้ให้พนักงานทาง LINE ใช้ได้ครั้งเดียว หมดอายุ", "Send this to the employee on LINE. Single use, expires")}{" "}
+          {fmtDateTime(invite.expiresAt, lang)}
         </p>
-        <code className="break-all rounded-lg bg-muted px-3 py-2 text-sm">{invite.url}</code>
+        <code className="rounded-xl bg-muted px-3 py-2 text-sm break-all">{invite.url}</code>
         <div className="flex gap-2">
-          <Button onClick={copy}>{copied ? "คัดลอกแล้ว" : "คัดลอกข้อความ"}</Button>
+          <Button onClick={copy}>{copied ? t("คัดลอกแล้ว", "Copied") : t("คัดลอกข้อความ", "Copy message")}</Button>
           <Button variant="ghost" onClick={onClose}>
-            ปิด
+            {t("ปิด", "Close")}
           </Button>
         </div>
       </CardContent>

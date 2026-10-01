@@ -5,14 +5,16 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Field, FormError, NativeSelect } from "@/components/field";
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { FormError, SelectField, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
+import { useLang } from "@/lib/i18n";
 import { provinceName, provinces } from "@/lib/provinces";
 import { keys, useBranches } from "@/lib/queries";
 import type { Branch, MinimumWageRate } from "@/lib/types";
 
 export default function BranchesPage() {
+  const { t, lang } = useLang();
   const branches = useBranches();
   const queryClient = useQueryClient();
   const [province, setProvince] = useState("TH-10");
@@ -33,14 +35,13 @@ export default function BranchesPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.branches }),
   });
   const errors = create.error?.fieldErrors;
+  const sorted = [...provinces].sort((a, b) => a[lang].localeCompare(b[lang], lang));
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">สาขา</h1>
-
       <Card>
         <CardHeader>
-          <CardTitle>เพิ่มสาขา</CardTitle>
+          <CardTitle>{t("เพิ่มสาขา", "Add branch")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form
@@ -51,21 +52,40 @@ export default function BranchesPage() {
             <div className="sm:col-span-2">
               <FormError message={errors && Object.keys(errors).length ? null : create.error?.message} />
             </div>
-            <Field label="ชื่อสาขา" name="name" placeholder="เช่น โกดังบางนา" errors={errors} required />
-            <NativeSelect label="จังหวัด" name="provinceCode" value={province} onChange={(e) => setProvince(e.target.value)}>
-              {provinces.map((p) => (
+            <TextField
+              label={t("ชื่อสาขา", "Branch name")}
+              name="name"
+              placeholder={t("เช่น โกดังบางนา", "e.g. Bang Na warehouse")}
+              errors={errors}
+              required
+            />
+            <SelectField label={t("จังหวัด", "Province")} name="provinceCode" value={province} onValueChange={setProvince}>
+              {sorted.map((p) => (
                 <option key={p.code} value={p.code}>
-                  {p.name}
+                  {p[lang]}
                 </option>
               ))}
-            </NativeSelect>
-            <Field label="ละติจูด (ไม่บังคับ)" name="geoLat" inputMode="decimal" placeholder="13.6600" errors={errors} />
-            <Field label="ลองจิจูด (ไม่บังคับ)" name="geoLng" inputMode="decimal" placeholder="100.6000" errors={errors} />
-            <Field label="รัศมีลงเวลา (เมตร)" name="geoRadiusMeters" type="number" defaultValue={150} min={20} max={5000} errors={errors} />
-            <Field label="รหัสอำเภอที่มีค่าแรงพิเศษ (ไม่บังคับ)" name="areaCode" placeholder="เช่น 9011 = หาดใหญ่" errors={errors} />
-            <div className="flex items-center gap-3 sm:col-span-2">
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "กำลังบันทึก…" : "เพิ่มสาขา"}
+            </SelectField>
+            <TextField label={t("ละติจูด (ไม่บังคับ)", "Latitude (optional)")} name="geoLat" inputMode="decimal" placeholder="13.6600" errors={errors} />
+            <TextField label={t("ลองจิจูด (ไม่บังคับ)", "Longitude (optional)")} name="geoLng" inputMode="decimal" placeholder="100.6000" errors={errors} />
+            <TextField
+              label={t("รัศมีลงเวลา (เมตร)", "Clock-in radius (m)")}
+              name="geoRadiusMeters"
+              type="number"
+              defaultValue={150}
+              min={20}
+              max={5000}
+              errors={errors}
+            />
+            <TextField
+              label={t("รหัสอำเภอที่มีค่าแรงพิเศษ (ไม่บังคับ)", "District code with special wage (optional)")}
+              name="areaCode"
+              placeholder={t("เช่น 9011 = หาดใหญ่", "e.g. 9011 = Hat Yai")}
+              errors={errors}
+            />
+            <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+              <Button type="submit" loading={create.isPending}>
+                {create.isPending ? t("กำลังบันทึก…", "Saving…") : t("เพิ่มสาขา", "Add branch")}
               </Button>
               <MinimumWageHint province={province} />
             </div>
@@ -78,10 +98,10 @@ export default function BranchesPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>สาขา</TableHead>
-                <TableHead>จังหวัด</TableHead>
-                <TableHead>พิกัด</TableHead>
-                <TableHead className="text-right">รัศมี</TableHead>
+                <TableHead>{t("สาขา", "Branch")}</TableHead>
+                <TableHead>{t("จังหวัด", "Province")}</TableHead>
+                <TableHead>{t("พิกัด", "Location")}</TableHead>
+                <TableHead className="text-right">{t("รัศมี", "Radius")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -89,21 +109,26 @@ export default function BranchesPage() {
                 <TableRow key={b.id}>
                   <TableCell className="font-medium">{b.name}</TableCell>
                   <TableCell>
-                    {provinceName(b.provinceCode)}
-                    {b.areaCode && <span className="text-muted-foreground"> · อ.{b.areaCode}</span>}
+                    {provinceName(b.provinceCode, lang)}
+                    {b.areaCode && (
+                      <span className="text-muted-foreground">
+                        {" "}· {t("อ.", "District ")}
+                        {b.areaCode}
+                      </span>
+                    )}
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {b.geoLat != null ? `${b.geoLat}, ${b.geoLng}` : "ยังไม่ตั้ง"}
+                    {b.geoLat != null ? `${b.geoLat}, ${b.geoLng}` : t("ยังไม่ตั้ง", "Not set")}
                   </TableCell>
-                  <TableCell className="text-right">{b.geoRadiusMeters} ม.</TableCell>
+                  <TableCell className="text-right">
+                    {b.geoRadiusMeters} {t("ม.", "m")}
+                  </TableCell>
                 </TableRow>
               ))}
               {branches.data?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground">
-                    ยังไม่มีสาขา
-                  </TableCell>
-                </TableRow>
+                <TableEmpty colSpan={4}>
+                    {t("ยังไม่มีสาขา", "No branches yet")}
+                  </TableEmpty>
               )}
             </TableBody>
           </Table>
@@ -114,6 +139,7 @@ export default function BranchesPage() {
 }
 
 function MinimumWageHint({ province }: { province: string }) {
+  const { t } = useLang();
   const rate = useQuery({
     queryKey: ["minimum-wage", province],
     queryFn: () => api<MinimumWageRate>(`/api/legal/minimum-wage?province=${province}`),
@@ -121,8 +147,8 @@ function MinimumWageHint({ province }: { province: string }) {
   if (!rate.data) return null;
   return (
     <span className="flex items-center gap-2 text-sm text-muted-foreground">
-      ค่าแรงขั้นต่ำ {rate.data.dailyRate} บาท/วัน
-      {!rate.data.verified && <Badge variant="outline">ยังไม่ยืนยันกับประกาศ</Badge>}
+      {t("ค่าแรงขั้นต่ำ", "Minimum wage")} {rate.data.dailyRate} {t("บาท/วัน", "THB/day")}
+      {!rate.data.verified && <Badge variant="warning">{t("ยังไม่ยืนยันกับประกาศ", "Not yet verified")}</Badge>}
     </span>
   );
 }

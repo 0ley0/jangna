@@ -3,11 +3,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FormError } from "@/components/field";
+import { FormError, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
+import { displayYear } from "@/lib/format";
+import { useLang } from "@/lib/i18n";
 import type { Employee, OpeningBalance } from "@/lib/types";
 
 export function OpeningBalancePanel({ employee, year }: { employee: Employee; year: number }) {
+  const { t, lang } = useLang();
   const queryClient = useQueryClient();
   const queryKey = ["opening-balances", year];
   const balances = useQuery({
@@ -37,11 +40,16 @@ export function OpeningBalancePanel({ employee, year }: { employee: Employee; ye
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ยอดยกมาต้นปี {year + 543}</CardTitle>
+        <CardTitle>
+          {t("ยอดยกมาต้นปี", "Year-to-date opening balance")} {displayYear(year, lang)}
+        </CardTitle>
       </CardHeader>
       <CardContent className="grid gap-4">
         <p className="text-sm text-muted-foreground">
-          ถ้าเริ่มใช้จ้างนะกลางปี ให้กรอกยอดตั้งแต่ ม.ค. ถึงก่อนรอบแรกในระบบ — ใช้ประมาณภาษีหัก ณ ที่จ่ายให้ถูก
+          {t(
+            "ถ้าเริ่มใช้จ้างนะกลางปี ให้กรอกยอดตั้งแต่ ม.ค. ถึงก่อนรอบแรกในระบบ — ใช้ประมาณภาษีหัก ณ ที่จ่ายให้ถูก",
+            "Started using Jangna mid-year? Enter totals from January up to your first pay run here, so withholding tax is estimated correctly",
+          )}
         </p>
         {!balances.isPending && (
           <form
@@ -52,11 +60,11 @@ export function OpeningBalancePanel({ employee, year }: { employee: Employee; ye
             <div className="sm:col-span-4">
               <FormError message={save.error?.message} />
             </div>
-            <Field label="เงินได้สะสม" name="taxableIncome" type="number" min={0} step="0.01" defaultValue={current?.taxableIncome ?? ""} />
-            <Field label="ภาษีที่หักไปแล้ว" name="taxWithheld" type="number" min={0} step="0.01" defaultValue={current?.taxWithheld ?? ""} />
-            <Field label="ประกันสังคมสะสม" name="socialSecurity" type="number" min={0} step="0.01" defaultValue={current?.socialSecurity ?? ""} />
-            <Button type="submit" disabled={save.isPending}>
-              {save.isSuccess ? "บันทึกแล้ว" : "บันทึกยอดยกมา"}
+            <TextField label={t("เงินได้สะสม", "Taxable income to date")} name="taxableIncome" type="number" min={0} step="0.01" defaultValue={current?.taxableIncome ?? ""} />
+            <TextField label={t("ภาษีที่หักไปแล้ว", "Tax withheld to date")} name="taxWithheld" type="number" min={0} step="0.01" defaultValue={current?.taxWithheld ?? ""} />
+            <TextField label={t("ประกันสังคมสะสม", "Social security to date")} name="socialSecurity" type="number" min={0} step="0.01" defaultValue={current?.socialSecurity ?? ""} />
+            <Button type="submit" loading={save.isPending}>
+              {save.isSuccess ? t("บันทึกแล้ว", "Saved") : t("บันทึกยอดยกมา", "Save opening balance")}
             </Button>
           </form>
         )}

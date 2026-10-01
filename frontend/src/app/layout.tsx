@@ -3,10 +3,10 @@ import { Noto_Sans_Thai } from "next/font/google";
 import { Providers } from "./providers";
 import "./globals.css";
 
+// ฟอนต์หลักของจ้างนะ: Noto Sans Thai (มีทั้งตัวไทยและละติน) — variable font น้ำหนัก 100–900
 const notoSansThai = Noto_Sans_Thai({
   variable: "--font-noto-sans-thai",
   subsets: ["thai", "latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {

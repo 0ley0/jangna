@@ -7,66 +7,63 @@ import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FormError, NativeSelect } from "@/components/field";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { DateRangeField, monthsShort, toIso, type DateRange, type RangePreset } from "@/components/date-picker";
+import { FormError } from "@/components/ui/form-field";
+import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, ApiError } from "@/lib/api";
-import { baht, daysInMonth, isoDate, thaiDate, thaiMonth } from "@/lib/format";
+import { baht, daysInMonth, fmtDate } from "@/lib/format";
+import { useLang, type Lang } from "@/lib/i18n";
 import type { PayRunDetail, PayRunSummary } from "@/lib/types";
 
-type Span = "full" | "first" | "second";
+/** รอบจ่ายต้องอยู่ในเดือนเดียว → ปุ่มลัด: ทั้งเดือน / 1–15 / 16–สิ้นเดือน ของเดือนนี้และเดือนก่อน */
+function payPeriodPresets(lang: Lang): RangePreset[] {
+  const now = new Date();
+  return [0, -1].flatMap((offset) => {
+    const d = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const last = daysInMonth(y, m + 1);
+    const name = monthsShort(lang)[m];
+    return [
+      { label: lang === "en" ? `All of ${name}` : `ทั้งเดือน ${name}`, get: () => ({ start: toIso(y, m, 1), end: toIso(y, m, last) }) },
+      { label: `1–15 ${name}`, get: () => ({ start: toIso(y, m, 1), end: toIso(y, m, 15) }) },
+      { label: `16–${last} ${name}`, get: () => ({ start: toIso(y, m, 16), end: toIso(y, m, last) }) },
+    ];
+  });
+}
 
 export default function PayRunsPage() {
   const router = useRouter();
-  const now = new Date();
-  const [month, setMonth] = useState(`${now.getFullYear()}-${now.getMonth() + 1}`);
-  const [span, setSpan] = useState<Span>("full");
+  const { t, lang } = useLang();
+  const presets = payPeriodPresets(lang);
+  const [period, setPeriod] = useState<DateRange | null>(() => presets[0].get());
 
   const runs = useQuery({ queryKey: ["pay-runs"], queryFn: () => api<PayRunSummary[]>("/api/pay-runs") });
 
   const create = useMutation<PayRunDetail, ApiError>({
-    mutationFn: () => {
-      const [y, m] = month.split("-").map(Number);
-      const last = daysInMonth(y, m);
-      const [from, to] = span === "first" ? [1, 15] : span === "second" ? [16, last] : [1, last];
-      return api("/api/pay-runs", {
+    mutationFn: () =>
+      api("/api/pay-runs", {
         method: "POST",
-        json: { periodStart: isoDate(y, m, from), periodEnd: isoDate(y, m, to) },
-      });
-    },
+        json: { periodStart: period!.start, periodEnd: period!.end },
+      }),
     onSuccess: (run) => router.push(`/app/pay-runs/${run.summary.id}`),
-  });
-
-  const months = Array.from({ length: 4 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - 2 + i, 1);
-    return { value: `${d.getFullYear()}-${d.getMonth() + 1}`, label: thaiMonth(d.getFullYear(), d.getMonth() + 1) };
   });
 
   return (
     <div className="grid gap-6">
-      <h1 className="text-2xl font-semibold">รอบจ่ายเงิน</h1>
-
       <Card>
         <CardHeader>
-          <CardTitle>สร้างรอบจ่าย</CardTitle>
+          <CardTitle>{t("สร้างรอบจ่าย", "New pay run")}</CardTitle>
         </CardHeader>
         <CardContent className="grid items-end gap-4 sm:grid-cols-3">
           <div className="sm:col-span-3">
             <FormError message={create.error?.message} />
           </div>
-          <NativeSelect label="เดือน" name="month" value={month} onChange={(e) => setMonth(e.target.value)}>
-            {months.map((m) => (
-              <option key={m.value} value={m.value}>
-                {m.label}
-              </option>
-            ))}
-          </NativeSelect>
-          <NativeSelect label="ช่วง" name="span" value={span} onChange={(e) => setSpan(e.target.value as Span)}>
-            <option value="full">ทั้งเดือน</option>
-            <option value="first">วันที่ 1–15</option>
-            <option value="second">วันที่ 16–สิ้นเดือน</option>
-          </NativeSelect>
-          <Button onClick={() => create.mutate()} disabled={create.isPending}>
-            {create.isPending ? "กำลังคำนวณ…" : "คำนวณเงินเดือน"}
+          <div className="sm:col-span-2">
+            <DateRangeField label={t("ช่วงรอบจ่าย (ต้องอยู่ในเดือนเดียวกัน)", "Pay period (must be within one month)")} value={period} onChange={setPeriod} presets={presets} />
+          </div>
+          <Button variant="accent" onClick={() => create.mutate()} disabled={create.isPending || !period}>
+            {create.isPending ? t("กำลังคำนวณ…", "Calculating…") : t("คำนวณเงินเดือน", "Run payroll")}
           </Button>
         </CardContent>
       </Card>
@@ -76,12 +73,12 @@ export default function PayRunsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>รอบ</TableHead>
-                <TableHead>สถานะ</TableHead>
-                <TableHead className="text-right">คน</TableHead>
-                <TableHead className="text-right">รวมเงินได้</TableHead>
-                <TableHead className="text-right">จ่ายสุทธิ</TableHead>
-                <TableHead className="text-right">คำเตือน</TableHead>
+                <TableHead>{t("รอบ", "Period")}</TableHead>
+                <TableHead>{t("สถานะ", "Status")}</TableHead>
+                <TableHead className="text-right">{t("คน", "Staff")}</TableHead>
+                <TableHead className="text-right">{t("รวมเงินได้", "Gross")}</TableHead>
+                <TableHead className="text-right">{t("จ่ายสุทธิ", "Net pay")}</TableHead>
+                <TableHead className="text-right">{t("คำเตือน", "Warnings")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -89,11 +86,11 @@ export default function PayRunsPage() {
                 <TableRow key={r.id}>
                   <TableCell>
                     <Link href={`/app/pay-runs/${r.id}`} className="font-medium hover:underline">
-                      {thaiDate(r.periodStart)} – {thaiDate(r.periodEnd)}
+                      {fmtDate(r.periodStart, lang)} – {fmtDate(r.periodEnd, lang)}
                     </Link>
                   </TableCell>
                   <TableCell>
-                    {r.status === "Locked" ? <Badge>ปิดรอบแล้ว</Badge> : <Badge variant="outline">ร่าง</Badge>}
+                    {r.status === "Locked" ? <Badge variant="success">{t("ปิดรอบแล้ว", "Locked")}</Badge> : <Badge variant="outline">{t("ร่าง", "Draft")}</Badge>}
                   </TableCell>
                   <TableCell className="text-right">{r.employees}</TableCell>
                   <TableCell className="text-right">{baht(r.gross)}</TableCell>
@@ -102,11 +99,9 @@ export default function PayRunsPage() {
                 </TableRow>
               ))}
               {runs.data?.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    ยังไม่มีรอบจ่าย
-                  </TableCell>
-                </TableRow>
+                <TableEmpty colSpan={6}>
+                    {t("ยังไม่มีรอบจ่าย", "No pay runs yet")}
+                  </TableEmpty>
               )}
             </TableBody>
           </Table>

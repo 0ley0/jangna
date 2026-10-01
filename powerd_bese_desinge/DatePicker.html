@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hearth — DatePicker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+Thai+Looped:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+  :root {
+    --cream: #FAF6EF;
+    --cream-2: #F6F0E4;
+    --beige: #F3EAD9;
+    --beige-2: #EBDFC7;
+    --hairline: #E6D9BF;
+    --ink: #2A2520;
+    --ink-2: #4A4036;
+    --muted: #8B7A66;
+    --terracotta: #C97B5D;
+    --terracotta-2: #B86949;
+    --terracotta-soft: #F5DDD0;
+    --sage: #8FA284;
+    --plum: #9A6B7E;
+    --amber: #D4A256;
+  }
+  html, body { background: var(--cream); color: var(--ink); }
+  body {
+    font-family: 'Noto Sans', 'Noto Sans Thai Looped', ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(800px 400px at 100% -10%, rgba(212,162,86,0.10), transparent 60%),
+      radial-gradient(700px 380px at -5% 110%, rgba(201,123,93,0.08), transparent 55%),
+      var(--cream);
+    min-height: 100vh;
+  }
+  .font-num { font-variant-numeric: tabular-nums; }
+
+  /* ------------ DatePicker core ------------ */
+  .dp {
+    background: #FFFDF8;
+    border: 1px solid var(--hairline);
+    border-radius: 18px;
+    padding: 16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,0.6) inset,
+      0 1px 2px rgba(74,64,54,0.04),
+      0 18px 40px -20px rgba(74,64,54,0.18);
+    width: 320px;
+    color: var(--ink);
+  }
+  .dp-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 2px 4px 12px 4px;
+  }
+  .dp-title {
+    font-weight: 600; font-size: 14px; letter-spacing: -0.005em;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 10px; cursor: pointer;
+    transition: background .15s ease;
+  }
+  .dp-title:hover { background: var(--beige); }
+  .dp-nav {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .dp-iconbtn {
+    width: 30px; height: 30px; border-radius: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: var(--ink-2); background: transparent; cursor: pointer;
+    transition: background .15s ease, color .15s ease, transform .15s ease;
+  }
+  .dp-iconbtn:hover { background: var(--beige); color: var(--ink); }
+  .dp-iconbtn:active { transform: scale(0.95); }
+
+  .dp-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr);
+    padding: 0 2px 4px 2px;
+  }
+  .dp-weekday {
+    text-align: center; font-size: 11px; font-weight: 500;
+    color: var(--muted); padding: 6px 0; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+
+  .dp-grid {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+  }
+  .dp-day {
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-variant-numeric: tabular-nums;
+    color: var(--ink); cursor: pointer; position: relative;
+    background: transparent; border: 1px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease, transform .15s ease;
+  }
+  .dp-day:hover { background: var(--beige); }
+  .dp-day.out { color: rgba(139,122,102,0.55); }
+  .dp-day.today { border-color: var(--terracotta); color: var(--terracotta-2); font-weight: 600; }
+  .dp-day.selected {
+    background: var(--ink); color: #FAF6EF; font-weight: 600;
+    box-shadow: 0 6px 14px -6px rgba(42,37,32,0.45);
+    border-color: var(--ink);
+  }
+  .dp-day.selected:hover { background: #1d1915; }
+  .dp-day.has-event::after {
+    content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+    width: 4px; height: 4px; border-radius: 999px; background: var(--terracotta);
+  }
+  .dp-day.selected.has-event::after { background: var(--cream); }
+  .dp-day.disabled { color: rgba(139,122,102,0.35); cursor: not-allowed; }
+  .dp-day.disabled:hover { background: transparent; }
+
+  /* Range selection */
+  .dp-day.in-range {
+    background: var(--terracotta-soft);
+    color: var(--ink);
+    border-radius: 0;
+  }
+  .dp-day.range-start {
+    background: var(--terracotta); color: #FFF8EE; font-weight: 600;
+    border-top-right-radius: 0; border-bottom-right-radius: 0;
+  }
+  .dp-day.range-end {
+    background: var(--terracotta); color: #FFF8EE; font-weight: 600;
+    border-top-left-radius: 0; border-bottom-left-radius: 0;
+  }
+  .dp-day.range-start.range-end { border-radius: 10px; }
+  .dp-day.in-range:hover { background: #EFCDBC; }
+
+  .dp-foot {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-top: 14px; padding-top: 12px;
+    border-top: 1px dashed var(--hairline);
+  }
+  .dp-foot .left { font-size: 12px; color: var(--muted); }
+  .dp-foot .left b { color: var(--ink); font-weight: 600; }
+
+  .btn-ghost-sm {
+    background: transparent; color: var(--ink-2); border-radius: 8px;
+    padding: 5px 10px; font-size: 12px; font-weight: 500; cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+  }
+  .btn-ghost-sm:hover { background: var(--beige); color: var(--ink); }
+  .btn-primary-sm {
+    background: var(--ink); color: #FAF6EF; border-radius: 9px;
+    padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, 0 6px 12px -6px rgba(42,37,32,0.4);
+  }
+  .btn-primary-sm:hover { background: #1d1915; }
+  .btn-accent-sm {
+    background: var(--terracotta); color: #FFF8EE; border-radius: 9px;
+    padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+    transition: background .15s ease, transform .15s ease;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.18) inset, 0 8px 16px -8px rgba(201,123,93,0.55);
+  }
+  .btn-accent-sm:hover { background: var(--terracotta-2); }
+
+  /* Quick presets */
+  .preset-col {
+    display: flex; flex-direction: column; gap: 2px;
+    width: 132px; flex-shrink: 0; padding: 8px 8px 8px 4px;
+    border-right: 1px dashed var(--hairline); margin-right: 14px;
+  }
+  @media (max-width: 860px) {
+    .range-body { flex-direction: column; }
+    .preset-col { width: 100%; border-right: 0; border-bottom: 1px dashed var(--hairline); margin: 0 0 12px 0; padding: 0 0 8px 0; flex-direction: row; flex-wrap: wrap; }
+    .preset-col .hairline-label { display: none; }
+    .range-months { flex-direction: column; }
+  }
+  .preset {
+    padding: 7px 10px; border-radius: 9px; font-size: 13px;
+    color: var(--ink-2); cursor: pointer; text-align: left;
+    transition: background .15s ease, color .15s ease;
+  }
+  .preset:hover { background: var(--beige); color: var(--ink); }
+  .preset.active { background: var(--ink); color: var(--cream); font-weight: 500; }
+
+  /* Field (input) */
+  .field {
+    background: #FFFDF8; border: 1px solid var(--hairline); border-radius: 12px;
+    padding: 10px 12px; font-size: 14px; color: var(--ink);
+    display: inline-flex; align-items: center; gap: 10px;
+    cursor: pointer; min-width: 220px;
+    transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+  }
+  .field:hover { background: #FBF4E5; }
+  .field.open { border-color: var(--terracotta); box-shadow: 0 0 0 4px rgba(201,123,93,0.12); }
+  .field .placeholder { color: var(--muted); }
+  .field .icon { color: var(--muted); }
+  .field-label {
+    display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    color: var(--muted); text-transform: uppercase; margin-bottom: 6px;
+  }
+
+  /* Popover */
+  .popover-wrap { position: relative; display: inline-block; }
+  .popover {
+    position: absolute; top: calc(100% + 8px); left: 0; z-index: 20;
+    animation: popIn .18s ease-out;
+    transform-origin: top left;
+  }
+  @keyframes popIn { from { opacity: 0; transform: translateY(-4px) scale(0.98);} to { opacity: 1; transform: translateY(0) scale(1);} }
+
+  /* Mini picker */
+  .dp-mini { width: 260px; padding: 12px; }
+  .dp-mini .dp-day { font-size: 12px; border-radius: 8px; }
+
+  /* Year/month picker grid */
+  .ym-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px 2px;
+  }
+  .ym-cell {
+    padding: 12px 0; border-radius: 10px; text-align: center; font-size: 13px;
+    color: var(--ink-2); cursor: pointer; background: transparent;
+    border: 1px solid transparent;
+    transition: background .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .ym-cell:hover { background: var(--beige); color: var(--ink); }
+  .ym-cell.current { border-color: var(--terracotta); color: var(--terracotta-2); font-weight: 600; }
+  .ym-cell.selected { background: var(--ink); color: var(--cream); font-weight: 600; }
+
+  /* Time picker */
+  .time-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; }
+  .time-input {
+    background: #FBF4E5; border: 1px solid var(--hairline); border-radius: 10px;
+    padding: 6px 10px; font-size: 13px; font-variant-numeric: tabular-nums;
+    color: var(--ink); width: 56px; text-align: center; outline: none;
+  }
+  .time-input:focus { border-color: var(--terracotta); background: #FFFDF8; }
+  .ampm {
+    display: inline-flex; background: var(--beige); border-radius: 10px; padding: 3px; gap: 3px;
+  }
+  .ampm button {
+    padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 500; color: var(--ink-2);
+    transition: background .15s ease, color .15s ease;
+  }
+  .ampm button.on { background: #FFFDF8; color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+
+  /* Showcase layout */
+  .hairline-label {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.08em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  .hairline-label::before, .hairline-label::after { content: ''; height: 1px; background: var(--hairline); flex: 1; min-width: 24px; }
+
+  .variant-card {
+    background: rgba(255,253,248,0.55);
+    border: 1px solid var(--hairline);
+    border-radius: 20px;
+    padding: 28px;
+    display: flex; flex-direction: column; align-items: center; gap: 18px;
+  }
+  .variant-name {
+    font-size: 13px; font-weight: 600; color: var(--ink); letter-spacing: -0.005em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .variant-name .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--terracotta); }
+  .variant-desc { font-size: 12px; color: var(--muted); text-align: center; max-width: 260px; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo, useRef, useEffect } = React;
+
+/* --------- Icons (minimal, matching Hearth set) --------- */
+const Ic = ({ d, size = 16, sw = 1.6, ...p }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+       strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" {...p}>
+    {d}
+  </svg>
+);
+const IcCal = (p)=> <Ic {...p} d={<><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3.5v3M16 3.5v3"/></>} />;
+const IcChevL = (p)=> <Ic {...p} d={<path d="m15 6-6 6 6 6"/>} />;
+const IcChevR = (p)=> <Ic {...p} d={<path d="m9 6 6 6-6 6"/>} />;
+const IcChevD = (p)=> <Ic {...p} d={<path d="m6 9 6 6 6-6"/>} />;
+const IcClock = (p)=> <Ic {...p} d={<><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></>} />;
+const IcArrow = (p)=> <Ic {...p} d={<path d="M5 12h14m-5-5 5 5-5 5"/>} />;
+const IcSpark = (p)=> <Ic {...p} d={<><path d="M12 3.5v3M12 17.5v3M3.5 12h3M17.5 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"/></>} />;
+
+/* --------- Date utilities --------- */
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const WEEKDAYS = ['S','M','T','W','T','F','S'];
+const WEEKDAYS_FULL = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+const sameDay = (a, b) => a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate();
+const startOfDay = (d) => { const x = new Date(d); x.setHours(0,0,0,0); return x; };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const addMonths = (d, n) => { const x = new Date(d); x.setMonth(x.getMonth()+n); return x; };
+const fmtLong = (d) => `${WEEKDAYS_FULL[d.getDay()]}, ${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+const fmtShort = (d) => `${MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
+
+function buildMonthGrid(year, month) {
+  // returns 6 weeks * 7 days
+  const first = new Date(year, month, 1);
+  const startDayOfWeek = first.getDay(); // 0 Sun
+  const start = addDays(first, -startDayOfWeek);
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = addDays(start, i);
+    cells.push({ date: d, inMonth: d.getMonth() === month });
+  }
+  return cells;
+}
+
+/* Fake events for visual richness */
+const TODAY = startOfDay(new Date(2026, 4, 21)); // pinned for stable demo: May 21, 2026
+const EVENT_DATES = new Set([
+  startOfDay(new Date(2026, 4, 5)).getTime(),
+  startOfDay(new Date(2026, 4, 8)).getTime(),
+  startOfDay(new Date(2026, 4, 13)).getTime(),
+  startOfDay(new Date(2026, 4, 21)).getTime(),
+  startOfDay(new Date(2026, 4, 22)).getTime(),
+  startOfDay(new Date(2026, 4, 28)).getTime(),
+]);
+const hasEvent = (d) => EVENT_DATES.has(startOfDay(d).getTime());
+
+/* --------- Core Calendar (single date) --------- */
+function Calendar({
+  value,
+  onChange,
+  minDate,
+  className = '',
+  showEvents = true,
+  onPickToday,
+  footer = true,
+  size = 'normal', // 'normal' | 'mini'
+}) {
+  const [view, setView] = useState(value || TODAY);   // viewing month
+  const [mode, setMode] = useState('days'); // 'days' | 'months' | 'years'
+
+  const year = view.getFullYear();
+  const month = view.getMonth();
+  const cells = useMemo(() => buildMonthGrid(year, month), [year, month]);
+
+  const goPrev = () => setView(mode === 'days' ? addMonths(view, -1) : mode === 'months' ? new Date(year-1, month, 1) : new Date(year-12, month, 1));
+  const goNext = () => setView(mode === 'days' ? addMonths(view, 1) : mode === 'months' ? new Date(year+1, month, 1) : new Date(year+12, month, 1));
+
+  return (
+    <div className={`dp ${size==='mini' ? 'dp-mini' : ''} ${className}`}>
+      <div className="dp-head">
+        <button
+          className="dp-title"
+          onClick={() => setMode(mode === 'days' ? 'months' : mode === 'months' ? 'years' : 'days')}
+        >
+          {mode === 'days' && <>{MONTHS[month]} <span className="font-num text-[var(--muted)] font-normal">{year}</span></>}
+          {mode === 'months' && <>{year}</>}
+          {mode === 'years' && <>{year-6} – {year+5}</>}
+          <IcChevD size={14} />
+        </button>
+        <div className="dp-nav">
+          <button className="dp-iconbtn" onClick={goPrev} aria-label="Previous"><IcChevL /></button>
+          <button className="dp-iconbtn" onClick={goNext} aria-label="Next"><IcChevR /></button>
+        </div>
+      </div>
+
+      {mode === 'days' && (
+        <>
+          <div className="dp-weekdays">
+            {WEEKDAYS.map((w, i) => <div key={i} className="dp-weekday">{w}</div>)}
+          </div>
+          <div className="dp-grid">
+            {cells.map(({ date, inMonth }, i) => {
+              const isToday = sameDay(date, TODAY);
+              const isSel = sameDay(date, value);
+              const disabled = minDate && date < startOfDay(minDate);
+              const event = showEvents && hasEvent(date);
+              return (
+                <button
+                  key={i}
+                  className={[
+                    'dp-day',
+                    !inMonth && 'out',
+                    isToday && 'today',
+                    isSel && 'selected',
+                    disabled && 'disabled',
+                    event && 'has-event',
+                  ].filter(Boolean).join(' ')}
+                  disabled={disabled}
+                  onClick={() => !disabled && onChange && onChange(date)}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {mode === 'months' && (
+        <div className="ym-grid">
+          {MONTHS_SHORT.map((m, i) => (
+            <button
+              key={i}
+              className={`ym-cell ${i === TODAY.getMonth() && year === TODAY.getFullYear() ? 'current' : ''} ${i === month ? 'selected' : ''}`}
+              onClick={() => { setView(new Date(year, i, 1)); setMode('days'); }}
+            >{m}</button>
+          ))}
+        </div>
+      )}
+
+      {mode === 'years' && (
+        <div className="ym-grid">
+          {Array.from({ length: 12 }, (_, i) => year - 6 + i).map((y) => (
+            <button
+              key={y}
+              className={`ym-cell ${y === TODAY.getFullYear() ? 'current' : ''} ${y === year ? 'selected' : ''}`}
+              onClick={() => { setView(new Date(y, month, 1)); setMode('months'); }}
+            >{y}</button>
+          ))}
+        </div>
+      )}
+
+      {footer && (
+        <div className="dp-foot">
+          <div className="left">
+            {value ? <>Selected · <b>{fmtShort(value)}</b></> : <>No date selected</>}
+          </div>
+          <div className="flex items-center gap-1">
+            <button className="btn-ghost-sm" onClick={() => { setView(TODAY); setMode('days'); onPickToday && onPickToday(); }}>Today</button>
+            <button className="btn-primary-sm" onClick={() => onChange && onChange(value || TODAY)}>Done</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------- Field-with-Popover --------- */
+function DateField({ value, onChange, placeholder = 'Pick a date', label }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
+  return (
+    <div ref={ref} className="popover-wrap">
+      {label && <span className="field-label">{label}</span>}
+      <button className={`field ${open ? 'open' : ''}`} onClick={() => setOpen(o => !o)}>
+        <span className="icon"><IcCal /></span>
+        <span style={{flex:1, textAlign:'left'}} className={value ? '' : 'placeholder'}>
+          {value ? fmtLong(value) : placeholder}
+        </span>
+        <IcChevD size={14} style={{color:'var(--muted)'}} />
+      </button>
+      {open && (
+        <div className="popover">
+          <Calendar value={value} onChange={(d) => { onChange(d); setOpen(false); }} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* --------- Range Calendar (two months) --------- */
+function RangeCalendar({ range, onChange, presets = true }) {
+  const [view, setView] = useState(range?.start || TODAY);
+  const [hover, setHover] = useState(null);
+
+  const start = range?.start;
+  const end = range?.end;
+
+  const handleClick = (d) => {
+    if (!start || (start && end)) {
+      onChange({ start: d, end: null });
+    } else {
+      if (d < start) onChange({ start: d, end: start });
+      else onChange({ start, end: d });
+    }
+  };
+
+  const renderMonth = (offset) => {
+    const v = addMonths(view, offset);
+    const y = v.getFullYear(), m = v.getMonth();
+    const cells = buildMonthGrid(y, m);
+    return (
+      <div style={{flex:1}}>
+        <div className="dp-head" style={{paddingBottom:8}}>
+          {offset === 0 ? (
+            <button className="dp-iconbtn" onClick={() => setView(addMonths(view, -1))}><IcChevL /></button>
+          ) : <span style={{width:30}}/>}
+          <div className="dp-title" style={{cursor:'default'}}>{MONTHS[m]} <span className="font-num text-[var(--muted)] font-normal">{y}</span></div>
+          {offset === 1 ? (
+            <button className="dp-iconbtn" onClick={() => setView(addMonths(view, 1))}><IcChevR /></button>
+          ) : <span style={{width:30}}/>}
+        </div>
+        <div className="dp-weekdays">
+          {WEEKDAYS.map((w, i) => <div key={i} className="dp-weekday">{w}</div>)}
+        </div>
+        <div className="dp-grid">
+          {cells.map(({ date, inMonth }, i) => {
+            const isStart = sameDay(date, start);
+            const isEnd = sameDay(date, end);
+            let inRange = false;
+            if (start && end) inRange = date > start && date < end;
+            else if (start && hover && !end) {
+              const lo = hover < start ? hover : start;
+              const hi = hover < start ? start : hover;
+              inRange = date > lo && date < hi;
+            }
+            const isToday = sameDay(date, TODAY);
+            return (
+              <button
+                key={i}
+                className={[
+                  'dp-day',
+                  !inMonth && 'out',
+                  isToday && !isStart && !isEnd && 'today',
+                  isStart && 'range-start',
+                  isEnd && 'range-end',
+                  inRange && 'in-range',
+                ].filter(Boolean).join(' ')}
+                onClick={() => handleClick(date)}
+                onMouseEnter={() => setHover(date)}
+                onMouseLeave={() => setHover(null)}
+              >
+                {date.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const presetOptions = [
+    { label: 'Today', get: () => ({ start: TODAY, end: TODAY }) },
+    { label: 'Yesterday', get: () => ({ start: addDays(TODAY,-1), end: addDays(TODAY,-1) }) },
+    { label: 'Last 7 days', get: () => ({ start: addDays(TODAY,-6), end: TODAY }) },
+    { label: 'Last 30 days', get: () => ({ start: addDays(TODAY,-29), end: TODAY }) },
+    { label: 'This month', get: () => ({ start: new Date(TODAY.getFullYear(), TODAY.getMonth(), 1), end: TODAY }) },
+    { label: 'Last month', get: () => {
+      const s = new Date(TODAY.getFullYear(), TODAY.getMonth()-1, 1);
+      const e = new Date(TODAY.getFullYear(), TODAY.getMonth(), 0);
+      return { start: s, end: e };
+    }},
+    { label: 'This year', get: () => ({ start: new Date(TODAY.getFullYear(),0,1), end: TODAY }) },
+  ];
+
+  const days = (start && end) ? Math.round((end - start)/86400000) + 1 : 0;
+
+  return (
+    <div className="dp range-dp" style={{width: '100%', maxWidth: 680, padding: 18}}>
+      <div className="range-body" style={{display:'flex'}}>
+        {presets && (
+          <div className="preset-col">
+            <div className="hairline-label" style={{marginBottom:6, paddingLeft:6}}>Quick</div>
+            {presetOptions.map(p => (
+              <button key={p.label} className="preset" onClick={() => { const r = p.get(); onChange(r); setView(r.start); }}>{p.label}</button>
+            ))}
+          </div>
+        )}
+        <div className="range-months" style={{display:'flex', gap:18, flex:1, minWidth:0}}>
+          {renderMonth(0)}
+          {renderMonth(1)}
+        </div>
+      </div>
+      <div className="dp-foot" style={{marginTop:16}}>
+        <div className="left">
+          {start && end ? (
+            <><b>{fmtShort(start)}</b> → <b>{fmtShort(end)}</b> · <span className="text-[var(--terracotta-2)] font-semibold">{days} days</span></>
+          ) : start ? (
+            <>Start: <b>{fmtShort(start)}</b> — pick end date</>
+          ) : (
+            <>Select start and end dates</>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          <button className="btn-ghost-sm" onClick={() => onChange({ start: null, end: null })}>Clear</button>
+          <button className="btn-accent-sm">Apply</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* --------- Calendar + Time --------- */
+function DateTimeCalendar({ value, onChange }) {
+  const [d, setD] = useState(value || new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate(), 9, 30));
+  const h12 = ((d.getHours() % 12) || 12);
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  const ampm = d.getHours() >= 12 ? 'PM' : 'AM';
+
+  const setHour = (v) => {
+    let h = parseInt(v||'0',10); if (isNaN(h)) h = 0;
+    h = Math.max(1, Math.min(12, h));
+    const nd = new Date(d);
+    nd.setHours(ampm==='PM' ? (h%12)+12 : (h%12));
+    setD(nd);
+  };
+  const setMin = (v) => {
+    let m = parseInt(v||'0',10); if (isNaN(m)) m = 0;
+    m = Math.max(0, Math.min(59, m));
+    const nd = new Date(d); nd.setMinutes(m); setD(nd);
+  };
+  const setAmpm = (a) => {
+    const nd = new Date(d);
+    if (a === 'AM' && nd.getHours() >= 12) nd.setHours(nd.getHours()-12);
+    if (a === 'PM' && nd.getHours() < 12) nd.setHours(nd.getHours()+12);
+    setD(nd);
+  };
+
+  return (
+    <div className="dp" style={{width:340}}>
+      <Calendar value={d} onChange={(nd) => {
+        const merged = new Date(nd); merged.setHours(d.getHours(), d.getMinutes(), 0, 0); setD(merged);
+      }} footer={false} className="!p-0 !border-0 !shadow-none !w-auto" />
+      <div className="time-row" style={{justifyContent:'space-between', paddingTop: 4}}>
+        <div className="flex items-center gap-2">
+          <IcClock size={15} style={{color:'var(--muted)'}}/>
+          <input className="time-input" value={h12} onChange={e => setHour(e.target.value)} />
+          <span className="text-[var(--muted)] font-num">:</span>
+          <input className="time-input" value={mm} onChange={e => setMin(e.target.value)} />
+          <div className="ampm">
+            <button className={ampm==='AM' ? 'on' : ''} onClick={() => setAmpm('AM')}>AM</button>
+            <button className={ampm==='PM' ? 'on' : ''} onClick={() => setAmpm('PM')}>PM</button>
+          </div>
+        </div>
+      </div>
+      <div className="dp-foot">
+        <div className="left">Scheduled · <b>{fmtShort(d)} at {h12}:{mm} {ampm}</b></div>
+        <button className="btn-primary-sm" onClick={() => onChange && onChange(d)}>Save</button>
+      </div>
+    </div>
+  );
+}
+
+/* --------- App / Showcase --------- */
+function App() {
+  const [single, setSingle] = useState(TODAY);
+  const [fieldVal, setFieldVal] = useState(addDays(TODAY, 3));
+  const [range, setRange] = useState({ start: addDays(TODAY, -6), end: TODAY });
+  const [dt, setDt] = useState(null);
+  const [mini, setMini] = useState(TODAY);
+
+  return (
+    <div className="max-w-[1240px] mx-auto px-8 py-12">
+      {/* Header */}
+      <div className="flex items-end justify-between mb-10">
+        <div>
+          <div className="hairline-label mb-3" style={{justifyContent:'flex-start'}}>
+            <span>Hearth · Components</span>
+          </div>
+          <h1 className="text-[34px] font-semibold tracking-tight ink" style={{letterSpacing:'-0.02em'}}>
+            DatePicker
+          </h1>
+          <p className="muted mt-1 text-sm max-w-[520px]" style={{color:'var(--muted)'}}>
+            Five variants — single, popover field, range with presets, mini, and date + time. All composed with the
+            Hearth tokens (cream, terracotta, hairline beige).
+          </p>
+        </div>
+        <div className="flex items-center gap-2 text-xs" style={{color:'var(--muted)'}}>
+          <span className="inline-block w-2 h-2 rounded-full" style={{background:'var(--terracotta)'}}></span>
+          May 21, 2026 · Today
+        </div>
+      </div>
+
+      {/* Variants */}
+      <div className="grid grid-cols-12 gap-6">
+
+        {/* 1. Single inline */}
+        <div className="col-span-4 variant-card">
+          <div className="text-center">
+            <div className="variant-name"><span className="dot"></span>01 · Single date</div>
+            <div className="variant-desc mt-1">Inline calendar with month/year drill-down, today indicator, and event dots.</div>
+          </div>
+          <Calendar value={single} onChange={setSingle} />
+        </div>
+
+        {/* 2. Field + popover */}
+        <div className="col-span-4 variant-card" style={{justifyContent:'flex-start'}}>
+          <div className="text-center">
+            <div className="variant-name"><span className="dot"></span>02 · Field + popover</div>
+            <div className="variant-desc mt-1">Form field with a calendar popover. Click anywhere outside to dismiss.</div>
+          </div>
+          <div style={{width:'100%', paddingTop: 8}}>
+            <DateField label="Due date" value={fieldVal} onChange={setFieldVal} />
+            <div className="text-xs mt-3" style={{color:'var(--muted)'}}>
+              You picked <span className="font-semibold ink">{fmtLong(fieldVal)}</span>
+            </div>
+          </div>
+          {/* Decorative second example */}
+          <div style={{width:'100%'}}>
+            <span className="field-label">Reminder</span>
+            <div className="field" style={{cursor:'default'}}>
+              <span className="icon"><IcCal /></span>
+              <span className="placeholder" style={{flex:1, textAlign:'left'}}>No date — uses default</span>
+              <span className="text-[11px] font-semibold tracking-wide" style={{color:'var(--muted)'}}>OPTIONAL</span>
+            </div>
+          </div>
+          <div className="mt-auto" />
+        </div>
+
+        {/* 3. Mini picker */}
+        <div className="col-span-4 variant-card">
+          <div className="text-center">
+            <div className="variant-name"><span className="dot"></span>03 · Mini</div>
+            <div className="variant-desc mt-1">Compact 260px calendar — perfect for sidebars and side panels.</div>
+          </div>
+          <Calendar value={mini} onChange={setMini} size="mini" footer={false} />
+          <div className="text-xs" style={{color:'var(--muted)'}}>
+            <span className="font-semibold ink">3 events</span> this week
+          </div>
+        </div>
+
+        {/* 4. Date + time */}
+        <div className="col-span-12 md:col-span-4 variant-card">
+          <div className="text-center">
+            <div className="variant-name"><span className="dot"></span>04 · Date + time</div>
+            <div className="variant-desc mt-1">Calendar paired with a 12-hour time field — ideal for scheduling.</div>
+          </div>
+          <DateTimeCalendar value={dt} onChange={setDt} />
+        </div>
+
+        {/* 5. Range — full row */}
+        <div className="col-span-12 variant-card">
+          <div className="text-center">
+            <div className="variant-name"><span className="dot"></span>05 · Date range</div>
+            <div className="variant-desc mt-1">Dual-month range picker with quick presets. Hover to preview, click to commit.</div>
+          </div>
+          <RangeCalendar range={range} onChange={setRange} />
+        </div>
+      </div>
+
+      {/* States legend */}
+      <div className="mt-14">
+        <div className="hairline-label mb-4">States</div>
+        <div className="flex flex-wrap gap-8 items-center">
+          <Legend swatch={<div className="dp-day" style={{width:34,height:34}}>14</div>} label="Default" />
+          <Legend swatch={<div className="dp-day today" style={{width:34,height:34}}>21</div>} label="Today" />
+          <Legend swatch={<div className="dp-day selected" style={{width:34,height:34}}>9</div>} label="Selected" />
+          <Legend swatch={<div className="dp-day has-event" style={{width:34,height:34}}>13</div>} label="Has event" />
+          <Legend swatch={<div className="dp-day out" style={{width:34,height:34}}>30</div>} label="Out of month" />
+          <Legend swatch={<div className="dp-day disabled" style={{width:34,height:34}}>3</div>} label="Disabled" />
+          <Legend swatch={
+            <div style={{display:'flex'}}>
+              <div className="dp-day range-start" style={{width:34,height:34}}>4</div>
+              <div className="dp-day in-range" style={{width:34,height:34}}>5</div>
+              <div className="dp-day range-end" style={{width:34,height:34}}>6</div>
+            </div>
+          } label="Range" />
+        </div>
+      </div>
+
+      <div className="text-center text-xs mt-14" style={{color:'var(--muted)'}}>
+        Hearth · DatePicker · v1
+      </div>
+    </div>
+  );
+}
+
+function Legend({ swatch, label }) {
+  return (
+    <div className="flex items-center gap-3">
+      {swatch}
+      <span className="text-xs font-medium ink-2" style={{color:'var(--ink-2)'}}>{label}</span>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
