@@ -17,7 +17,7 @@ public static class PayrollCalculator
         var ctx = new Context(input, rules);
 
         foreach (var day in input.Days.Where(d => d.Date < input.Period.Start || d.Date > input.Period.End))
-            ctx.Warn($"วันที่ {day.Date:yyyy-MM-dd} อยู่นอกรอบจ่าย — ไม่นำมาคิด");
+            ctx.Warn($"วันที่ {day.Date:yyyy-MM-dd} อยู่นอกรอบจ่าย — ไม่นำมาคิด", $"{day.Date:yyyy-MM-dd} is outside the pay period — ignored");
 
         var days = input.Days.Where(d => d.Date >= input.Period.Start && d.Date <= input.Period.End).ToList();
         CheckWorkingHours(ctx, days);
@@ -74,7 +74,8 @@ public static class PayrollCalculator
         }
 
         if (ctx.Input.MinimumDailyWage is { } minimum && dailyRate < minimum)
-            ctx.Warn($"เงินเดือนเฉลี่ย {Money(dailyRate)} บาท/วัน ต่ำกว่าค่าแรงขั้นต่ำ {Money(minimum)} บาท/วัน");
+            ctx.Warn($"เงินเดือนเฉลี่ย {Money(dailyRate)} บาท/วัน ต่ำกว่าค่าแรงขั้นต่ำ {Money(minimum)} บาท/วัน",
+                $"Salary averages {Money(dailyRate)} THB/day, below the minimum wage of {Money(minimum)} THB/day");
     }
 
     /// <summary>รายวัน/รายชั่วโมง: จ่ายตามชั่วโมงที่ทำจริง + วันหยุดนักขัตฤกษ์/ลาที่ได้ค่าจ้าง</summary>
@@ -135,7 +136,8 @@ public static class PayrollCalculator
         {
             if (entry.Date < ctx.Input.Period.Start || entry.Date > ctx.Input.Period.End)
             {
-                ctx.Warn($"ผลงาน {entry.Description} วันที่ {entry.Date:yyyy-MM-dd} อยู่นอกรอบจ่าย — ไม่นำมาคิด");
+                ctx.Warn($"ผลงาน {entry.Description} วันที่ {entry.Date:yyyy-MM-dd} อยู่นอกรอบจ่าย — ไม่นำมาคิด",
+                    $"Piece work \"{entry.Description}\" on {entry.Date:yyyy-MM-dd} is outside the pay period — ignored");
                 continue;
             }
 
@@ -167,7 +169,8 @@ public static class PayrollCalculator
                 var dailyRate = ctx.Input.Employee.BaseRate > 0 ? ctx.Input.Employee.BaseRate : ctx.Input.MinimumDailyWage;
                 if (dailyRate is null)
                 {
-                    ctx.Warn($"วันที่ {day.Date:dd/MM} ควรได้ค่าจ้าง แต่ไม่มีค่าจ้างรายวันพื้นฐานหรือค่าแรงขั้นต่ำ");
+                    ctx.Warn($"วันที่ {day.Date:dd/MM} ควรได้ค่าจ้าง แต่ไม่มีค่าจ้างรายวันพื้นฐานหรือค่าแรงขั้นต่ำ",
+                        $"{day.Date:dd/MM} should be paid, but there is no base daily rate or minimum wage");
                     continue;
                 }
                 var (code, label) = day.Kind == DayKind.PublicHoliday
@@ -178,13 +181,15 @@ public static class PayrollCalculator
         }
 
         if (ctx.Input.Employee.BaseRate == 0 && days.Any(d => d.Kind == DayKind.PublicHoliday && d.NormalHours == 0))
-            ctx.Warn("ค่าจ้างวันหยุดนักขัตฤกษ์ของลูกจ้างต่อชิ้นใช้ค่าแรงขั้นต่ำแทน — ควรตั้งค่าจ้างรายวันพื้นฐาน (ค่าเฉลี่ยผลงาน)");
+            ctx.Warn("ค่าจ้างวันหยุดนักขัตฤกษ์ของลูกจ้างต่อชิ้นใช้ค่าแรงขั้นต่ำแทน — ควรตั้งค่าจ้างรายวันพื้นฐาน (ค่าเฉลี่ยผลงาน)",
+                "Public holiday pay for piece-rate staff used the minimum wage — set a base daily rate (average earnings)");
     }
 
     private static void CheckWorkingHours(Context ctx, List<DayRecord> days)
     {
         foreach (var day in days.Where(d => d.NormalHours > ctx.HoursPerDay))
-            ctx.Warn($"วันที่ {day.Date:dd/MM} เวลาปกติ {day.NormalHours} ชม. เกิน {ctx.HoursPerDay} ชม. — ส่วนที่เกินควรบันทึกเป็น OT");
+            ctx.Warn($"วันที่ {day.Date:dd/MM} เวลาปกติ {day.NormalHours} ชม. เกิน {ctx.HoursPerDay} ชม. — ส่วนที่เกินควรบันทึกเป็น OT",
+                $"{day.Date:dd/MM}: {day.NormalHours} regular hours exceeds {ctx.HoursPerDay} — record the excess as overtime");
 
         foreach (var day in days.Where(d => d.NormalHours < 0 || d.OvertimeHours < 0))
             throw new ArgumentException($"ชั่วโมงทำงานติดลบ: {day.Date:yyyy-MM-dd}");
@@ -231,8 +236,10 @@ public static class PayrollCalculator
         if (advance > 0) ctx.Deduct(LineCodes.Advance, "หักเงินเบิกล่วงหน้า", 1, advance);
 
         var carried = input.OutstandingAdvances - advance;
-        if (carried > 0) ctx.Warn($"เงินเบิกล่วงหน้าเกินยอดจ่าย — ยกไปหักรอบถัดไป {Money(carried)} บาท");
-        if (gross < 0) ctx.Warn("ยอดเงินได้ติดลบ — ตรวจวันขาดงาน/รายการหัก");
+        if (carried > 0)
+            ctx.Warn($"เงินเบิกล่วงหน้าเกินยอดจ่าย — ยกไปหักรอบถัดไป {Money(carried)} บาท",
+                $"Advances exceed this pay — {Money(carried)} THB carried over to the next pay run");
+        if (gross < 0) ctx.Warn("ยอดเงินได้ติดลบ — ตรวจวันขาดงาน/รายการหัก", "Gross pay is negative — check absences and deductions");
 
         return new PayResult(
             ctx.Lines, Round(gross), input.Employee.IsFreelance ? 0 : Round(taxable), sso, sso, Round(Math.Max(0, ssoWage)), wht, advance, carried,
@@ -244,7 +251,7 @@ public static class PayrollCalculator
 
     private static decimal Round(decimal v) => Math.Round(v, 2, MidpointRounding.AwayFromZero);
 
-    private static string Money(decimal v) => v.ToString("#,##0.00");
+    private static string Money(decimal v) => v.ToString("#,##0.00", System.Globalization.CultureInfo.InvariantCulture);
 
     private sealed class Context(PayInput input, LegalRules rules)
     {
@@ -252,10 +259,10 @@ public static class PayrollCalculator
         public LegalRules Rules { get; } = rules;
         public decimal HoursPerDay => Rules.WorkingTime.MaxHoursPerDay;
         public List<PayLine> Lines { get; } = [];
-        public List<string> Warnings { get; } = [];
+        public List<LocalizedText> Warnings { get; } = [];
         private bool _warnedNoMinimum;
 
-        public void Warn(string message) => Warnings.Add(message);
+        public void Warn(string th, string en) => Warnings.Add(new LocalizedText(th, en));
 
         public void Earn(string code, string description, decimal qty, decimal amount, bool taxable = true,
             bool sso = true, decimal? rate = null)
@@ -294,7 +301,7 @@ public static class PayrollCalculator
         {
             if (Input.MinimumDailyWage is not { } minimum)
             {
-                if (!_warnedNoMinimum) Warn("ไม่มีข้อมูลค่าแรงขั้นต่ำของสาขา — ไม่ได้ตรวจขั้นต่ำ");
+                if (!_warnedNoMinimum) Warn("ไม่มีข้อมูลค่าแรงขั้นต่ำของสาขา — ไม่ได้ตรวจขั้นต่ำ", "No minimum wage for this branch — minimum wage not checked");
                 _warnedNoMinimum = true;
                 return;
             }
@@ -305,7 +312,7 @@ public static class PayrollCalculator
             Earn(LineCodes.MinimumWageTopUp, $"เติมให้ถึงค่าแรงขั้นต่ำ {day.Date:dd/MM}", 1, floor - earnedNormal);
             if (!Input.MinimumWageVerified && !_warnedUnverified)
             {
-                Warn("ค่าแรงขั้นต่ำที่ใช้ยังไม่ได้ยืนยันกับประกาศฉบับจริง");
+                Warn("ค่าแรงขั้นต่ำที่ใช้ยังไม่ได้ยืนยันกับประกาศฉบับจริง", "The minimum wage used has not been verified against the official announcement");
                 _warnedUnverified = true;
             }
         }

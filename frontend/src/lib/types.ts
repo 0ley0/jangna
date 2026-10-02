@@ -49,6 +49,75 @@ export interface Employee {
   language: string;
   lineLinked: boolean;
   lineLinkedAt: string | null;
+  // ข้อมูลยื่น สปส./ภ.ง.ด.1
+  title: Title | null;
+  nationalId: string | null;
+  addressLine: string | null;
+  subdistrict: string | null;
+  district: string | null;
+  province: string | null;
+  postalCode: string | null;
+}
+
+export type Title = "Mr" | "Mrs" | "Miss";
+
+export const titleLabels: Record<Title, Bi> = {
+  Mr: ["นาย", "Mr"],
+  Mrs: ["นาง", "Mrs"],
+  Miss: ["นางสาว", "Miss"],
+};
+
+/** ข้อมูลร้านสำหรับสลิปและเอกสารนำส่ง (GET/PUT /api/shop) */
+export interface Shop {
+  name: string;
+  legalName: string | null;
+  address: string | null;
+  taxId: string | null;
+  taxBranchNo: string;
+  ssoAccountNo: string | null;
+  ssoBranchNo: string;
+  rdUserId: string | null;
+}
+
+/** ข้อความสองภาษาจาก backend (คำเตือนรอบจ่าย, ข้อมูลที่ขาดสำหรับยื่นแบบ) */
+export interface LocalizedText {
+  th: string;
+  en: string;
+}
+
+export interface FilingSummary {
+  year: number;
+  month: number;
+  lockedRuns: number;
+  draftRuns: number;
+  sso: { employees: number; wages: number; employeeContribution: number; employerContribution: number; issues: LocalizedText[] };
+  pnd1: { employees: number; paid: number; tax: number; issues: LocalizedText[] };
+}
+
+export type ShiftColor = "brand" | "sage" | "amber" | "plum" | "blue" | "neutral";
+
+export interface ShiftTemplate {
+  id: string;
+  name: string;
+  /** "HH:mm:ss" */
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+  color: ShiftColor;
+  archived: boolean;
+  hours: number;
+}
+
+export interface Shift {
+  id: string;
+  employeeId: string;
+  date: string;
+  templateId: string | null;
+  startTime: string;
+  endTime: string;
+  breakMinutes: number;
+  hours: number;
+  note: string | null;
 }
 
 export interface Invite {
@@ -146,6 +215,7 @@ export interface PayRunSummary {
   id: string;
   periodStart: string;
   periodEnd: string;
+  payDate: string;
   status: PayRunStatus;
   employees: number;
   gross: number;
@@ -170,7 +240,7 @@ export interface PayRunItem {
   advanceCarriedOver: number;
   net: number;
   lines: PayLine[];
-  warnings: string[];
+  warnings: LocalizedText[];
 }
 
 export interface PayRunDetail {
@@ -197,7 +267,7 @@ export const roleLabels: Record<Role, Bi> = {
   Staff: ["พนักงาน", "Staff"],
 };
 
-/** ชื่อรายการในสลิปตามรหัสจาก payroll engine (description จาก backend เป็นภาษาไทย) */
+/** ชื่อรายการในสลิปตามรหัสจาก payroll engine (description จาก backend เป็นภาษาไทย) — ชุดเดียวกับ backend Exports/PayLineLabels.cs */
 export const payLineLabels: Record<string, Bi> = {
   SALARY: ["เงินเดือน", "Salary"],
   UNPAID_ABSENCE: ["หักวันขาด/ลาไม่รับค่าจ้าง", "Unpaid absence"],

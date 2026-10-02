@@ -21,8 +21,8 @@ const chipVariants = cva(
         brand: "border-transparent bg-brand-soft text-brand-ink",
         sage: "border-transparent bg-sage-soft text-sage-ink",
         amber: "border-transparent bg-amber-soft text-amber-ink",
-        plum: "border-transparent bg-[#ecdde3] text-[#6b4254] dark:bg-[#43303a] dark:text-[#e6c4d2]",
-        blue: "border-transparent bg-[#dce5ec] text-[#3d5266] dark:bg-[#2f3a44] dark:text-[#c4d4e2]",
+        plum: "border-transparent bg-plum-soft text-plum-ink",
+        blue: "border-transparent bg-blue-soft text-blue-ink",
       },
       selected: {
         true: "border-primary bg-primary text-primary-foreground",

@@ -88,7 +88,7 @@ const iconBtn =
   "inline-flex size-[30px] items-center justify-center rounded-[10px] text-ink-2 transition hover:bg-muted hover:text-foreground active:scale-95";
 const smallGhost = "rounded-lg px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-muted hover:text-foreground";
 const smallAccent =
-  "rounded-[9px] bg-brand px-3 py-1.5 text-xs font-semibold text-brand-foreground shadow-brand transition hover:bg-brand-strong disabled:opacity-50";
+  "rounded-[9px] bg-brand-action px-3 py-1.5 text-xs font-semibold text-brand-foreground shadow-brand transition hover:bg-brand-action-hover disabled:opacity-50";
 
 function Weekdays({ lang }: { lang: Lang }) {
   return (
@@ -467,7 +467,7 @@ export function DateRangeField({
                   "flex aspect-square items-center justify-center rounded-[10px] border border-transparent text-[13px] tabular transition hover:bg-muted",
                   iso === today && !isStart && !isEnd && "border-brand font-semibold text-brand-strong",
                   inRange && "rounded-none bg-brand-soft hover:bg-[#efcdbc] dark:hover:bg-brand-soft",
-                  (isStart || isEnd) && "bg-brand font-semibold text-brand-foreground hover:bg-brand-strong",
+                  (isStart || isEnd) && "bg-brand-action font-semibold text-brand-foreground hover:bg-brand-action-hover",
                   isStart && end && !isEnd && "rounded-r-none",
                   isEnd && start && !isStart && "rounded-l-none",
                 )}

@@ -48,4 +48,7 @@ public sealed record PayResult(
     decimal AdvanceDeducted,
     decimal AdvanceCarriedOver,
     decimal Net,
-    IReadOnlyList<string> Warnings);
+    IReadOnlyList<LocalizedText> Warnings);
+
+/// <summary>ข้อความสองภาษา — engine สร้างทั้งไทยและอังกฤษไว้ ให้ฝั่งแสดงผลเลือกตามภาษาของผู้ใช้</summary>
+public sealed record LocalizedText(string Th, string En);

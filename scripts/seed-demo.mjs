@@ -29,6 +29,42 @@ if ((await call("GET", "/api/employees", undefined, token)).length > 0) {
 } else {
   await seed(token);
 }
+await seedFilingAndShifts(token);
+
+/** ข้อมูลยื่นแบบ + กะงาน — เติมเฉพาะที่ยังไม่มี (บัญชี demo เก่าก็ได้ด้วย) */
+async function seedFilingAndShifts(token) {
+  const shop = await call("GET", "/api/shop", undefined, token);
+  if (!shop.taxId)
+    await call("PUT", "/api/shop", {
+      ...shop, legalName: "ร้านแพ็คไว", address: "99 ถนนบางนา-ตราด แขวงบางนา เขตบางนา กรุงเทพฯ 10260",
+      taxId: "1234567890121", ssoAccountNo: "1000000001",
+    }, token);
+
+  // เลขบัตรตัวอย่าง (check digit ถูก แต่ไม่ใช่ของคนจริง)
+  const ids = { สมชาย: ["Mr", "1101700203450"], Aung: ["Mr", "3100500123458"], มาลี: ["Miss", "1100100100012"] };
+  for (const e of await call("GET", "/api/employees", undefined, token)) {
+    const [title, nationalId] = ids[e.firstName] ?? [];
+    if (e.nationalId || !nationalId) continue;
+    await call("PUT", `/api/employees/${e.id}`, {
+      ...e, title, nationalId, addressLine: "99", subdistrict: "บางนา", district: "บางนา", province: "กรุงเทพมหานคร", postalCode: "10260",
+    }, token);
+  }
+
+  if ((await call("GET", "/api/shift-templates", undefined, token)).length === 0) {
+    const morning = await call("POST", "/api/shift-templates", { name: "กะเช้า", startTime: "08:00:00", endTime: "17:00:00", breakMinutes: 60, color: "sage" }, token);
+    await call("POST", "/api/shift-templates", { name: "กะบ่าย", startTime: "13:00:00", endTime: "22:00:00", breakMinutes: 60, color: "amber" }, token);
+    // จัดกะเช้า จ.–ส. ของสัปดาห์นี้ให้ทุกคน
+    const now = new Date();
+    const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+    const dates = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
+      return iso(d.getFullYear(), d.getMonth() + 1, d.getDate());
+    });
+    const staff = await call("GET", "/api/employees", undefined, token);
+    await call("PUT", "/api/shifts", staff.flatMap((e) => dates.map((date) => ({ employeeId: e.id, date, templateId: morning.id }))), token);
+  }
+  console.log("ข้อมูลยื่นแบบ + กะงานตัวอย่าง พร้อมแล้ว");
+}
 
 // ไม่ใช้ process.exit() — บน Windows ทำให้ Node crash (libuv assertion) ตอนยังมี handle ของ fetch ค้าง
 async function seed(token) {

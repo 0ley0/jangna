@@ -1,0 +1,2 @@
+# สคริปต์ sh ของ skill impeccable ต้องเป็น LF (CRLF แล้ว sh รันไม่ได้)
+.claude/skills/impeccable/scripts/impeccable text eol=lf

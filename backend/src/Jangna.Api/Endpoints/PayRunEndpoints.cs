@@ -10,17 +10,19 @@ namespace Jangna.Api.Endpoints;
 
 public static class PayRunEndpoints
 {
-    public sealed record CreatePayRunRequest(DateOnly PeriodStart, DateOnly PeriodEnd);
+    public sealed record CreatePayRunRequest(DateOnly PeriodStart, DateOnly PeriodEnd, DateOnly? PayDate = null);
+
+    public sealed record PayDateRequest(DateOnly PayDate);
 
     public sealed record PayRunSummary(
-        Guid Id, DateOnly PeriodStart, DateOnly PeriodEnd, PayRunStatus Status, int Employees,
+        Guid Id, DateOnly PeriodStart, DateOnly PeriodEnd, DateOnly PayDate, PayRunStatus Status, int Employees,
         decimal Gross, decimal Net, decimal SocialSecurityEmployer, int Warnings, DateTimeOffset CalculatedAt, DateTimeOffset? LockedAt);
 
     public sealed record PayRunItemDto(
         Guid Id, Guid EmployeeId, string EmployeeName, PayType PayType, bool IsFreelance,
         decimal Gross, decimal SocialSecurityEmployee, decimal SocialSecurityEmployer, decimal WithholdingTax,
         decimal AdvanceDeducted, decimal AdvanceCarriedOver, decimal Net,
-        IReadOnlyList<PayLine> Lines, IReadOnlyList<string> Warnings);
+        IReadOnlyList<PayLine> Lines, IReadOnlyList<LocalizedText> Warnings);
 
     public sealed record PayRunDetail(PayRunSummary Summary, DateOnly RuleSetEffectiveFrom, IReadOnlyList<PayRunItemDto> Items);
 
@@ -40,10 +42,13 @@ public static class PayRunEndpoints
                 : Results.NotFound());
 
         runs.MapPost("/", (CreatePayRunRequest req, PayRunService service, CancellationToken ct) =>
-            Handle(async () => Results.Ok(Detail(await service.CreateAsync(req.PeriodStart, req.PeriodEnd, ct)))));
+            Handle(async () => Results.Ok(Detail(await service.CreateAsync(req.PeriodStart, req.PeriodEnd, req.PayDate, ct)))));
 
         runs.MapPost("/{id:guid}/recalculate", (Guid id, PayRunService service, CancellationToken ct) =>
             Handle(async () => Results.Ok(Detail(await service.RecalculateAsync(id, ct)))));
+
+        runs.MapPut("/{id:guid}/pay-date", (Guid id, PayDateRequest req, PayRunService service, CancellationToken ct) =>
+            Handle(async () => Results.Ok(Detail(await service.SetPayDateAsync(id, req.PayDate, ct)))));
 
         runs.MapPost("/{id:guid}/lock", (Guid id, ClaimsPrincipal user, PayRunService service, CancellationToken ct) =>
             Handle(async () => Results.Ok(Detail(await service.LockAsync(id, user.UserId(), ct)))))
@@ -72,7 +77,7 @@ public static class PayRunEndpoints
     }
 
     private static PayRunSummary Summary(PayRun r) =>
-        new(r.Id, r.PeriodStart, r.PeriodEnd, r.Status, r.Items.Count,
+        new(r.Id, r.PeriodStart, r.PeriodEnd, r.PayDate, r.Status, r.Items.Count,
             r.Items.Sum(i => i.Gross), r.Items.Sum(i => i.Net), r.Items.Sum(i => i.SocialSecurityEmployer),
             r.Items.Sum(i => i.Warnings.Count), r.CalculatedAt, r.LockedAt);
 

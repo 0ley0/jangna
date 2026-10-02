@@ -14,6 +14,14 @@ public enum WorkerType
     Freelance,
 }
 
+/// <summary>คำนำหน้าชื่อ — ใช้ใน สปส.1-10 (รหัส 003/005/004) และ ภ.ง.ด.1</summary>
+public enum Title
+{
+    Mr,
+    Mrs,
+    Miss,
+}
+
 public enum EmployeeStatus
 {
     Active,
@@ -22,10 +30,21 @@ public enum EmployeeStatus
 
 public sealed class Employee : TenantEntity, IAudited
 {
+    public Title? Title { get; set; }
     public required string FirstName { get; set; }
     public string LastName { get; set; } = "";
     public string? Nickname { get; set; }
     public string? Phone { get; set; }
+
+    /// <summary>เลขประจำตัวประชาชน 13 หลัก (= เลขประกันสังคม และเลขผู้เสียภาษี) — แรงงานต่างด้าวใช้เลขที่ สปส. ออกให้</summary>
+    public string? NationalId { get; set; }
+
+    // ที่อยู่ — ภ.ง.ด.1 บังคับ อำเภอ/จังหวัด/รหัสไปรษณีย์
+    public string? AddressLine { get; set; }
+    public string? Subdistrict { get; set; }
+    public string? District { get; set; }
+    public string? Province { get; set; }
+    public string? PostalCode { get; set; }
 
     public Guid? BranchId { get; set; }
     public Branch? Branch { get; set; }

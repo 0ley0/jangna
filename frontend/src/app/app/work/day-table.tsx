@@ -135,7 +135,8 @@ export function DayTable({ employee, year, month }: { employee: Employee; year: 
                 return (
                   <TableRow key={date} className={cn(r.kind !== "Workday" && "bg-muted/40", edits[date] && "bg-brand-soft/40")}>
                     <TableCell className="whitespace-nowrap">
-                      <span className="inline-block w-8 text-muted-foreground">{weekdayShort(date, lang)}</span>
+                      {/* ชื่อวันไทยยาวสุด "อาทิตย์"/"พฤหัส" เกิน 2rem → เว้นกว้างพอไม่ให้ชนเลขวันที่ */}
+                      <span className="mr-1 inline-block min-w-14 text-muted-foreground">{weekdayShort(date, lang)}</span>
                       {Number(date.slice(8))}
                       {holidayByDate.has(date) && (
                         <span className="ml-2 text-xs text-brand-strong">{holidayByDate.get(date)}</span>

@@ -18,6 +18,10 @@ public sealed class PayRun : TenantEntity, IAudited
     public DateOnly PeriodStart { get; set; }
     public DateOnly PeriodEnd { get; set; }
     public PayRunStatus Status { get; set; }
+
+    /// <summary>วันที่จ่ายเงินจริง — ใช้ในสลิปและ ภ.ง.ด.1 (ไม่กระทบการคำนวณ)</summary>
+    public DateOnly PayDate { get; set; }
+
     public DateOnly RuleSetEffectiveFrom { get; set; }
     public required LegalRules RulesSnapshot { get; set; }
     public DateTimeOffset CalculatedAt { get; set; }
@@ -47,6 +51,6 @@ public sealed class PayRunItem : TenantEntity
     public decimal Net { get; set; }
 
     public List<PayLine> Lines { get; set; } = [];
-    public List<string> Warnings { get; set; } = [];
+    public List<LocalizedText> Warnings { get; set; } = [];
     public required PayInput Input { get; set; }
 }

@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using Jangna.Api.Auth;
 using Jangna.Api.Line;
+using Jangna.Api.Localization;
 using Jangna.Core.Entities;
 using Jangna.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,12 +14,15 @@ public static class EmployeeEndpoints
 
     public sealed record EmployeeRequest(
         string FirstName, string? LastName, string? Nickname, string? Phone, Guid? BranchId,
-        PayType PayType, decimal BaseRate, WorkerType WorkerType, string? Language);
+        PayType PayType, decimal BaseRate, WorkerType WorkerType, string? Language,
+        Title? Title = null, string? NationalId = null, string? AddressLine = null, string? Subdistrict = null,
+        string? District = null, string? Province = null, string? PostalCode = null);
 
     public sealed record EmployeeDto(
         Guid Id, string FirstName, string LastName, string? Nickname, string? Phone, Guid? BranchId, string? BranchName,
         PayType PayType, decimal BaseRate, WorkerType WorkerType, EmployeeStatus Status, string Language,
-        bool LineLinked, DateTimeOffset? LineLinkedAt);
+        bool LineLinked, DateTimeOffset? LineLinkedAt,
+        Title? Title, string? NationalId, string? AddressLine, string? Subdistrict, string? District, string? Province, string? PostalCode);
 
     public sealed record InviteResponse(string Code, string Url, DateTimeOffset ExpiresAt);
 
@@ -41,7 +45,7 @@ public static class EmployeeEndpoints
 
         employees.MapPost("/", async (EmployeeRequest req, JangnaDbContext db, CancellationToken ct) =>
         {
-            if (await Validate(req, db, ct) is { } invalid) return invalid;
+            if (await Validate(req, null, db, ct) is { } invalid) return invalid;
 
             var employee = new Employee { FirstName = req.FirstName.Trim() };
             Apply(employee, req);
@@ -53,7 +57,7 @@ public static class EmployeeEndpoints
 
         employees.MapPut("/{id:guid}", async (Guid id, EmployeeRequest req, JangnaDbContext db, CancellationToken ct) =>
         {
-            if (await Validate(req, db, ct) is { } invalid) return invalid;
+            if (await Validate(req, id, db, ct) is { } invalid) return invalid;
 
             var employee = await db.Employees.Include(e => e.Branch).SingleOrDefaultAsync(e => e.Id == id, ct);
             if (employee is null) return Results.NotFound();
@@ -108,16 +112,25 @@ public static class EmployeeEndpoints
         return RandomNumberGenerator.GetString(alphabet, 8);
     }
 
-    private static async Task<IResult?> Validate(EmployeeRequest req, JangnaDbContext db, CancellationToken ct)
+    private static async Task<IResult?> Validate(EmployeeRequest req, Guid? id, JangnaDbContext db, CancellationToken ct)
     {
         var errors = new Dictionary<string, string[]>();
-        if (string.IsNullOrWhiteSpace(req.FirstName)) errors["firstName"] = ["กรุณากรอกชื่อ"];
-        if (req.BaseRate < 0) errors["baseRate"] = ["ค่าจ้างติดลบไม่ได้"];
-        if (req.PayType != PayType.Piece && req.BaseRate == 0) errors["baseRate"] = ["กรุณากรอกอัตราค่าจ้าง"];
-        if (req.Language is not (null or "th" or "en" or "my")) errors["language"] = ["รองรับ th, en, my"];
+        if (string.IsNullOrWhiteSpace(req.FirstName)) errors["firstName"] = [L.T("กรุณากรอกชื่อ", "First name is required")];
+        if (req.BaseRate < 0) errors["baseRate"] = [L.T("ค่าจ้างติดลบไม่ได้", "Pay rate cannot be negative")];
+        if (req.PayType != PayType.Piece && req.BaseRate == 0) errors["baseRate"] = [L.T("กรุณากรอกอัตราค่าจ้าง", "Enter a pay rate")];
+        if (req.Language is not (null or "th" or "en" or "my")) errors["language"] = [L.T("รองรับ th, en, my", "Supported: th, en, my")];
         // filter ของ tenant ทำให้ branch ของร้านอื่นหาไม่เจอ
         if (req.BranchId is { } branchId && !await db.Branches.AnyAsync(b => b.Id == branchId, ct))
-            errors["branchId"] = ["ไม่พบสาขา"];
+            errors["branchId"] = [L.T("ไม่พบสาขา", "Branch not found")];
+        if (Clean(req.NationalId) is { } nationalId)
+        {
+            if (!IsValidNationalId(nationalId))
+                errors["nationalId"] = [L.T("เลขประจำตัวประชาชนไม่ถูกต้อง (13 หลัก)", "Invalid national ID (13 digits)")];
+            else if (await db.Employees.AnyAsync(e => e.NationalId == nationalId && e.Id != id, ct))
+                errors["nationalId"] = [L.T("เลขนี้ใช้กับพนักงานคนอื่นแล้ว", "This ID is already used by another employee")];
+        }
+        if (Clean(req.PostalCode) is { } postal && (postal.Length != 5 || !postal.All(char.IsAsciiDigit)))
+            errors["postalCode"] = [L.T("รหัสไปรษณีย์ 5 หลัก", "Postal code must be 5 digits")];
         return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
     }
 
@@ -132,9 +145,36 @@ public static class EmployeeEndpoints
         e.BaseRate = req.BaseRate;
         e.WorkerType = req.WorkerType;
         e.Language = req.Language ?? "th";
+        e.Title = req.Title;
+        e.NationalId = Clean(req.NationalId);
+        e.AddressLine = Text(req.AddressLine);
+        e.Subdistrict = Text(req.Subdistrict);
+        e.District = Text(req.District);
+        e.Province = Text(req.Province);
+        e.PostalCode = Clean(req.PostalCode);
+    }
+
+    private static string? Text(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>ตัวเลข: ตัดช่องว่าง/ขีด (1-2345-67890-12-3 → 1234567890123) ว่าง = null</summary>
+    private static string? Clean(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        var trimmed = value.Trim();
+        return trimmed.All(c => char.IsAsciiDigit(c) || c is '-' or ' ') ? trimmed.Replace("-", "").Replace(" ", "") : trimmed;
+    }
+
+    /// <summary>เลขบัตรประชาชน 13 หลัก + check digit (หลักที่ 13 = (11 − Σ dᵢ×(14−i) mod 11) mod 10)</summary>
+    public static bool IsValidNationalId(string id)
+    {
+        if (id.Length != 13 || !id.All(char.IsAsciiDigit)) return false;
+        var sum = 0;
+        for (var i = 0; i < 12; i++) sum += (id[i] - '0') * (13 - i);
+        return (11 - sum % 11) % 10 == id[12] - '0';
     }
 
     private static EmployeeDto ToDto(Employee e) =>
         new(e.Id, e.FirstName, e.LastName, e.Nickname, e.Phone, e.BranchId, e.Branch?.Name,
-            e.PayType, e.BaseRate, e.WorkerType, e.Status, e.Language, e.LineUserId is not null, e.LineLinkedAt);
+            e.PayType, e.BaseRate, e.WorkerType, e.Status, e.Language, e.LineUserId is not null, e.LineLinkedAt,
+            e.Title, e.NationalId, e.AddressLine, e.Subdistrict, e.District, e.Province, e.PostalCode);
 }

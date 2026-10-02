@@ -3,12 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Fragment, useState } from "react";
+import { DateField } from "@/components/date-picker";
+import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FormError } from "@/components/ui/form-field";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, downloadFile } from "@/lib/api";
 import { baht, fmtDate, fmtDateTime } from "@/lib/format";
 import { useLang } from "@/lib/i18n";
 import { useMe } from "@/lib/queries";
@@ -39,6 +41,15 @@ export default function PayRunPage() {
     // ข้อมูลเปลี่ยนระหว่างนั้น → backend คำนวณใหม่ให้แล้ว ดึงมาแสดง
     onError: () => queryClient.invalidateQueries({ queryKey }),
   });
+  const payDate = useMutation<PayRunDetail, ApiError, string>({
+    mutationFn: (date) => api(`/api/pay-runs/${id}/pay-date`, { method: "PUT", json: { payDate: date } }),
+    onSuccess: onDone,
+  });
+  // employeeId = สลิปคนเดียว, null = ทุกคนในไฟล์เดียว (ภาษาตามที่ตั้งไว้ให้พนักงานแต่ละคน)
+  const slip = useMutation<void, ApiError, string | null>({
+    mutationFn: (employeeId) =>
+      downloadFile(`/api/pay-runs/${id}/payslips${employeeId ? `?employeeId=${employeeId}` : ""}`, "payslips.pdf"),
+  });
   const remove = useMutation<void, ApiError>({
     mutationFn: () => api(`/api/pay-runs/${id}`, { method: "DELETE" }),
     onSuccess: () => {
@@ -63,10 +74,15 @@ export default function PayRunPage() {
   return (
     <div className="grid gap-6">
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">
+        <h2 className="text-2xl font-semibold">
           {t("รอบ", "Pay run")} {fmtDate(summary.periodStart, lang)} – {fmtDate(summary.periodEnd, lang)}
-        </h1>
+        </h2>
         {draft ? <Badge variant="outline">{t("ร่าง", "Draft")}</Badge> : <Badge variant="success">{t("ปิดรอบแล้ว", "Locked")}</Badge>}
+        {!draft && (
+          <Button variant="accent" className="ml-auto" onClick={() => slip.mutate(null)} loading={slip.isPending && slip.variables === null}>
+            <Icon.Download size={16} /> {t("สลิปทุกคน (PDF)", "All payslips (PDF)")}
+          </Button>
+        )}
         {draft && (
           <div className="ml-auto flex gap-2">
             <Button variant="outline" onClick={() => recalc.mutate()} disabled={recalc.isPending}>
@@ -87,7 +103,25 @@ export default function PayRunPage() {
         )}
       </div>
 
-      <FormError message={recalc.error?.message ?? lock.error?.message ?? remove.error?.message} />
+      <FormError message={recalc.error?.message ?? lock.error?.message ?? remove.error?.message ?? payDate.error?.message ?? slip.error?.message} />
+
+      <div className="flex flex-wrap items-end gap-3">
+        {draft ? (
+          <div className="w-56">
+            <DateField
+              key={summary.payDate}
+              label={t("วันที่จ่ายเงิน (ใช้ในสลิปและ ภ.ง.ด.1)", "Pay date (on payslips and PND 1)")}
+              value={summary.payDate}
+              min={summary.periodStart}
+              onChange={(date) => date && date !== summary.payDate && payDate.mutate(date)}
+            />
+          </div>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            {t("จ่ายวันที่", "Paid on")} <span className="font-medium text-foreground">{fmtDate(summary.payDate, lang)}</span>
+          </span>
+        )}
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Stat label={t("รวมเงินได้", "Gross pay")} value={baht(summary.gross)} />
@@ -118,13 +152,28 @@ export default function PayRunPage() {
             <TableBody>
               {items.map((i) => (
                 <Fragment key={i.id}>
+                  {/* คลิกทั้งแถวได้ (เมาส์) — คีย์บอร์ด/screen reader ใช้ปุ่มในเซลล์ชื่อ */}
                   <TableRow className="cursor-pointer" onClick={() => setOpen(open === i.id ? null : i.id)}>
                     <TableCell>
-                      <span className="font-medium">{i.employeeName}</span>
-                      <span className="text-muted-foreground">
-                        {" "}· {t(...payTypeLabels[i.payType])}
-                        {i.isFreelance && ` · ${t("ฟรีแลนซ์", "Freelance")}`}
-                      </span>
+                      <button
+                        type="button"
+                        aria-expanded={open === i.id}
+                        aria-controls={`detail-${i.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpen(open === i.id ? null : i.id);
+                        }}
+                        className="-mx-1 inline-flex items-center gap-1.5 rounded-lg px-1 py-0.5 text-left outline-none focus-visible:ring-4 focus-visible:ring-brand/15"
+                      >
+                        <Icon.ChevronDown size={14} className={open === i.id ? "" : "-rotate-90"} />
+                        <span>
+                          <span className="font-medium">{i.employeeName}</span>
+                          <span className="text-muted-foreground">
+                            {" "}· {t(...payTypeLabels[i.payType])}
+                            {i.isFreelance && ` · ${t("ฟรีแลนซ์", "Freelance")}`}
+                          </span>
+                        </span>
+                      </button>
                       {i.warnings.length > 0 && (
                         <Badge variant="warning" className="ml-2">
                           ⚠ {i.warnings.length}
@@ -138,7 +187,7 @@ export default function PayRunPage() {
                     <TableCell className="text-right font-medium">{baht(i.net)}</TableCell>
                   </TableRow>
                   {open === i.id && (
-                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                    <TableRow id={`detail-${i.id}`} className="bg-muted/30 hover:bg-muted/30">
                       <TableCell colSpan={6}>
                         <div className="grid gap-3 py-2 sm:grid-cols-2">
                           <ul className="grid gap-1 text-sm">
@@ -152,16 +201,29 @@ export default function PayRunPage() {
                               </li>
                             ))}
                           </ul>
-                          {i.warnings.length > 0 && (
-                            <ul className="grid gap-1 text-sm text-amber-ink">
-                              {i.warnings.map((w) => (
-                                <li key={w}>⚠ {w}</li>
-                              ))}
-                              {lang === "en" && (
-                                <li className="text-xs text-muted-foreground">Warnings are shown in Thai for now.</li>
-                              )}
-                            </ul>
-                          )}
+                          <div className="grid content-start gap-3">
+                            {i.warnings.length > 0 && (
+                              <ul className="grid gap-1 text-sm text-amber-ink">
+                                {i.warnings.map((w) => (
+                                  <li key={w.th}>⚠ {t(w.th, w.en)}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {!draft && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="justify-self-start"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  slip.mutate(i.employeeId);
+                                }}
+                                loading={slip.isPending && slip.variables === i.employeeId}
+                              >
+                                <Icon.Download size={14} /> {t("สลิป PDF", "Payslip PDF")}
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                     </TableRow>

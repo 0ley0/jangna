@@ -1,4 +1,5 @@
 using Jangna.Api.Auth;
+using Jangna.Api.Localization;
 using Jangna.Core.Entities;
 using Jangna.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Identity;
@@ -24,15 +25,15 @@ public static class AuthEndpoints
             IPasswordHasher<User> hasher, CancellationToken ct) =>
         {
             var errors = new Dictionary<string, string[]>();
-            if (string.IsNullOrWhiteSpace(req.ShopName)) errors["shopName"] = ["กรุณากรอกชื่อร้าน"];
-            if (string.IsNullOrWhiteSpace(req.DisplayName)) errors["displayName"] = ["กรุณากรอกชื่อ"];
-            if (!req.Email.Contains('@')) errors["email"] = ["อีเมลไม่ถูกต้อง"];
-            if (req.Password.Length < 8) errors["password"] = ["รหัสผ่านอย่างน้อย 8 ตัวอักษร"];
+            if (string.IsNullOrWhiteSpace(req.ShopName)) errors["shopName"] = [L.T("กรุณากรอกชื่อร้าน", "Shop name is required")];
+            if (string.IsNullOrWhiteSpace(req.DisplayName)) errors["displayName"] = [L.T("กรุณากรอกชื่อ", "Your name is required")];
+            if (!req.Email.Contains('@')) errors["email"] = [L.T("อีเมลไม่ถูกต้อง", "Invalid email")];
+            if (req.Password.Length < 8) errors["password"] = [L.T("รหัสผ่านอย่างน้อย 8 ตัวอักษร", "Password must be at least 8 characters")];
             if (errors.Count > 0) return Results.ValidationProblem(errors);
 
             var email = NormalizeEmail(req.Email);
             if (await db.Users.AnyAsync(u => u.Email == email, ct))
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["email"] = ["อีเมลนี้ถูกใช้แล้ว"] });
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["email"] = [L.T("อีเมลนี้ถูกใช้แล้ว", "This email is already registered")] });
 
             var tenant = new Tenant { Name = req.ShopName.Trim() };
             var user = new User { Email = email, DisplayName = req.DisplayName.Trim() };
@@ -53,7 +54,7 @@ public static class AuthEndpoints
             var email = NormalizeEmail(req.Email);
             var user = await db.Users.SingleOrDefaultAsync(u => u.Email == email, ct);
             if (user is null || hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password) == PasswordVerificationResult.Failed)
-                return Results.Problem("อีเมลหรือรหัสผ่านไม่ถูกต้อง", statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Problem(L.T("อีเมลหรือรหัสผ่านไม่ถูกต้อง", "Incorrect email or password"), statusCode: StatusCodes.Status401Unauthorized);
 
             // ยังไม่ได้เลือก tenant ตอน login จึงต้องข้าม tenant filter อย่างตั้งใจ
             var memberships = await db.Memberships.IgnoreQueryFilters()
@@ -66,7 +67,7 @@ public static class AuthEndpoints
                 ? memberships.FirstOrDefault(x => x.Membership.TenantId == wanted)
                 : memberships.FirstOrDefault();
             if (selected is null)
-                return Results.Problem("ไม่มีสิทธิ์เข้าร้านนี้", statusCode: StatusCodes.Status403Forbidden);
+                return Results.Problem(L.T("ไม่มีสิทธิ์เข้าร้านนี้", "You do not have access to this shop"), statusCode: StatusCodes.Status403Forbidden);
 
             return Results.Ok(new AuthResponse(
                 tokens.Issue(user, selected.Membership), selected.Membership.TenantId,

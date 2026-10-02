@@ -62,7 +62,13 @@
   --color-amber-soft: var(--amber-soft);
   --color-amber-ink: var(--amber-ink);
   --color-plum: var(--plum);
+  --color-plum-soft: var(--plum-soft);
+  --color-plum-ink: var(--plum-ink);
+  --color-blue-soft: var(--blue-soft);
+  --color-blue-ink: var(--blue-ink);
   --color-brand-ink: var(--brand-ink);
+  --color-brand-action: var(--brand-action);
+  --color-brand-action-hover: var(--brand-action-hover);
 
   --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 8px 24px -12px rgba(74, 64, 54, 0.1);
   --shadow-pop: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 18px 40px -20px rgba(74, 64, 54, 0.18);
@@ -91,6 +97,18 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ลด motion: ยังเปลี่ยนหน้า/เปิด popover แบบค่อยๆ ปรากฏ (บอกว่าสถานะเปลี่ยน) แต่ไม่เลื่อนหรือซูม */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes pop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
 :root {
   --background: #faf6ef;      /* cream */
   --foreground: #2a2520;      /* ink */
@@ -103,7 +121,7 @@
   --secondary: #f3ead9;       /* beige */
   --secondary-foreground: #2a2520;
   --muted: #f3ead9;
-  --muted-foreground: #8b7a66;
+  --muted-foreground: #736350; /* ≥ 4.7:1 บนพื้น/การ์ด/เบจ (เดิม #8b7a66 = 3.8:1 ไม่ผ่าน AA) */
   --accent: #f3ead9;
   --accent-foreground: #2a2520;
   --destructive: #b5473a;
@@ -125,8 +143,12 @@
   --sidebar-border: #e6d9bf;
   --sidebar-ring: #c97b5d;
 
-  --brand: #c97b5d;           /* terracotta */
-  --brand-strong: #b86949;
+  /* brand = เทอร์ราคอตต้าของแบรนด์ ใช้กับขอบ/วงแหวนโฟกัส/ตัวอักษรใหญ่/ของตกแต่ง (คอนทราสต์กับครีม ~3:1)
+     ตัวอักษรเล็กบนพื้นสว่างใช้ brand-strong, พื้นปุ่ม/ช่วงวันที่ที่มีตัวอักษรทับใช้ brand-action (≥ 4.8:1) */
+  --brand: #c97b5d;
+  --brand-strong: #a45a3d;
+  --brand-action: #a45a3d;
+  --brand-action-hover: #8e4a30;
   --brand-soft: #fbe6d7;
   --brand-ink: #8e4a30;
   --brand-foreground: #fff8ee;
@@ -141,6 +163,10 @@
   --amber-soft: #f4e6c7;
   --amber-ink: #7a5a1d;
   --plum: #9a6b7e;
+  --plum-soft: #ecdde3;
+  --plum-ink: #6b4254;
+  --blue-soft: #dce5ec;
+  --blue-ink: #3d5266;
 }
 
 /* Hearth "dusk" */
@@ -156,7 +182,7 @@
   --secondary: #3a332b;
   --secondary-foreground: #f4ecdc;
   --muted: #3a332b;
-  --muted-foreground: #9f8e78;
+  --muted-foreground: #b0a08a; /* 5.4:1 บนการ์ดมืด (เดิม #9f8e78 = 4.3:1) */
   --accent: #3a332b;
   --accent-foreground: #f4ecdc;
   --destructive: #e07a6a;
@@ -172,8 +198,13 @@
   --sidebar-border: #4a4138;
   --sidebar-ring: #c97b5d;
 
+  --brand-strong: #e8a98c;
   --brand-soft: #4a3329;
   --brand-ink: #f0b89c;
+  --plum-soft: #43303a;
+  --plum-ink: #e6c4d2;
+  --blue-soft: #2f3a44;
+  --blue-ink: #c4d4e2;
   --surface: #322c25;
   --cream-2: #322c25;
   --beige-2: #473e33;
@@ -223,4 +254,27 @@
   }
 
   .tabular { font-variant-numeric: tabular-nums; }
+
+  /*
+   * จอสัมผัส: ปุ่ม/ช่องเลือก/ชิปกดได้ขนาดเล็กกว่า 44px → ขยายพื้นที่กด (ไม่เปลี่ยนหน้าตา)
+   * ด้วย ::after ที่ใหญ่อย่างน้อย 44×44 กึ่งกลางเดิม
+   */
+  @media (pointer: coarse) {
+    [data-slot="button"],
+    [data-slot="select"] > button,
+    [data-slot="chip"] > button {
+      position: relative;
+    }
+    [data-slot="button"]::after,
+    [data-slot="select"] > button::after,
+    [data-slot="chip"] > button::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
 }

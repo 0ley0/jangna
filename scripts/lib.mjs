@@ -44,3 +44,11 @@ export async function waitForApi(seconds = 60) {
 }
 
 export const iso = (y, m, d) => `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+/** ดาวน์โหลดไฟล์ (PDF/txt) — คืน bytes + header ไม่ parse JSON */
+export async function download(path, token) {
+  const res = await fetch(`${API}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (!res.ok) throw new Error(`GET ${path} → ${res.status}: ${new TextDecoder().decode(bytes)}`);
+  return { bytes, type: res.headers.get("content-type"), disposition: res.headers.get("content-disposition") };
+}

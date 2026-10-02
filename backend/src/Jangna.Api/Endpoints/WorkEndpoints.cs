@@ -1,4 +1,5 @@
 using Jangna.Api.Auth;
+using Jangna.Api.Localization;
 using Jangna.Api.PayRuns;
 using Jangna.Core.Entities;
 using Jangna.Infrastructure.Persistence;
@@ -59,7 +60,7 @@ public static class WorkEndpoints
             {
                 var x = items[i];
                 if (x.NormalHours is < 0 or > 24 || x.OvertimeHours is < 0 or > 24 || x.NormalHours + x.OvertimeHours > 24)
-                    errors[$"[{i}].hours"] = ["ชั่วโมงต้องอยู่ระหว่าง 0–24 และรวมกันไม่เกิน 24"];
+                    errors[$"[{i}].hours"] = [L.T("ชั่วโมงต้องอยู่ระหว่าง 0–24 และรวมกันไม่เกิน 24", "Hours must be 0–24 and total at most 24")];
             }
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             if (await Guard(items.Select(x => x.Date), items.Select(x => x.EmployeeId), db, runs, ct) is { } blocked) return blocked;
@@ -110,9 +111,9 @@ public static class WorkEndpoints
         manager.MapPost("/piece-work", async (PieceWorkRequest x, JangnaDbContext db, PayRunService runs, CancellationToken ct) =>
         {
             var errors = new Dictionary<string, string[]>();
-            if (string.IsNullOrWhiteSpace(x.Description)) errors["description"] = ["กรุณาระบุงาน"];
-            if (x.Quantity <= 0) errors["quantity"] = ["จำนวนต้องมากกว่า 0"];
-            if (x.Rate < 0) errors["rate"] = ["อัตราติดลบไม่ได้"];
+            if (string.IsNullOrWhiteSpace(x.Description)) errors["description"] = [L.T("กรุณาระบุงาน", "Describe the work")];
+            if (x.Quantity <= 0) errors["quantity"] = [L.T("จำนวนต้องมากกว่า 0", "Quantity must be greater than 0")];
+            if (x.Rate < 0) errors["rate"] = [L.T("อัตราติดลบไม่ได้", "Rate cannot be negative")];
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             if (await Guard([x.Date], [x.EmployeeId], db, runs, ct) is { } blocked) return blocked;
 
@@ -148,7 +149,7 @@ public static class WorkEndpoints
 
         manager.MapPost("/advances", async (AdvanceRequest x, JangnaDbContext db, CancellationToken ct) =>
         {
-            if (x.Amount == 0) return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = ["กรุณาระบุจำนวนเงิน"] });
+            if (x.Amount == 0) return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("กรุณาระบุจำนวนเงิน", "Enter an amount")] });
             if (!await db.Employees.AnyAsync(e => e.Id == x.EmployeeId, ct)) return Results.NotFound();
 
             var advance = new Advance { EmployeeId = x.EmployeeId, Date = x.Date, Amount = x.Amount, Note = x.Note };
@@ -167,11 +168,11 @@ public static class WorkEndpoints
         api.MapPut("/opening-balances", async (OpeningBalanceRequest x, JangnaDbContext db, CancellationToken ct) =>
         {
             if (x.TaxableIncome < 0 || x.TaxWithheld < 0 || x.SocialSecurity < 0)
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = ["ยอดติดลบไม่ได้"] });
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("ยอดติดลบไม่ได้", "Amounts cannot be negative")] });
             if (!await db.Employees.AnyAsync(e => e.Id == x.EmployeeId, ct)) return Results.NotFound();
             // ยอดยกมาใช้ตั้งต้นการประมาณภาษี — เปลี่ยนหลังปิดรอบแรกของปีแล้วจะทำให้รอบที่ปิดไปไม่ตรงกับยอดใหม่
             if (await db.PayRuns.AnyAsync(r => r.Status == PayRunStatus.Locked && r.PeriodStart.Year == x.Year, ct))
-                return Results.Problem("ปีนี้มีรอบจ่ายที่ปิดแล้ว แก้ยอดยกมาไม่ได้", statusCode: StatusCodes.Status409Conflict);
+                return Results.Problem(L.T("ปีนี้มีรอบจ่ายที่ปิดแล้ว แก้ยอดยกมาไม่ได้", "This year already has a locked pay run — opening balances can no longer change"), statusCode: StatusCodes.Status409Conflict);
 
             var balance = await db.OpeningBalances.SingleOrDefaultAsync(o => o.EmployeeId == x.EmployeeId && o.Year == x.Year, ct);
             if (balance is null)
@@ -196,10 +197,10 @@ public static class WorkEndpoints
 
         api.MapPost("/holidays", async (HolidayRequest x, JangnaDbContext db, PayRunService runs, CancellationToken ct) =>
         {
-            if (string.IsNullOrWhiteSpace(x.Name)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = ["กรุณาระบุชื่อวันหยุด"] });
+            if (string.IsNullOrWhiteSpace(x.Name)) return Results.ValidationProblem(new Dictionary<string, string[]> { ["name"] = [L.T("กรุณาระบุชื่อวันหยุด", "Holiday name is required")] });
             if (await runs.IsLockedAsync(x.Date, ct)) return LockedProblem();
             if (await db.Holidays.AnyAsync(h => h.Date == x.Date, ct))
-                return Results.Problem("วันนี้เป็นวันหยุดอยู่แล้ว", statusCode: StatusCodes.Status409Conflict);
+                return Results.Problem(L.T("วันนี้เป็นวันหยุดอยู่แล้ว", "This date is already a holiday"), statusCode: StatusCodes.Status409Conflict);
 
             var holiday = new Holiday { Date = x.Date, Name = x.Name.Trim() };
             db.Holidays.Add(holiday);
@@ -226,7 +227,7 @@ public static class WorkEndpoints
     {
         var ids = employeeIds.Distinct().ToList();
         if (await db.Employees.CountAsync(e => ids.Contains(e.Id), ct) != ids.Count)
-            return Results.Problem("ไม่พบพนักงาน", statusCode: StatusCodes.Status404NotFound);
+            return Results.Problem(L.T("ไม่พบพนักงาน", "Employee not found"), statusCode: StatusCodes.Status404NotFound);
 
         foreach (var date in dates.Distinct())
             if (await runs.IsLockedAsync(date, ct)) return LockedProblem(date);
@@ -234,6 +235,8 @@ public static class WorkEndpoints
     }
 
     private static IResult LockedProblem(DateOnly? date = null) =>
-        Results.Problem($"{(date is { } d ? $"วันที่ {d:dd/MM/yyyy} " : "")}อยู่ในรอบจ่ายที่ปิดแล้ว แก้ไขไม่ได้",
+        Results.Problem(date is { } d
+                ? L.T($"วันที่ {d:dd/MM/yyyy} อยู่ในรอบจ่ายที่ปิดแล้ว แก้ไขไม่ได้", $"{d:dd/MM/yyyy} is in a locked pay run and cannot be changed")
+                : L.T("อยู่ในรอบจ่ายที่ปิดแล้ว แก้ไขไม่ได้", "This date is in a locked pay run and cannot be changed"),
             statusCode: StatusCodes.Status409Conflict);
 }

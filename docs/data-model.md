@@ -6,11 +6,11 @@
 ## ตารางที่มีแล้ว
 | ตาราง | หน้าที่ | หมายเหตุ |
 |---|---|---|
-| `tenants` | ร้าน/บริษัท | |
+| `tenants` | ร้าน/บริษัท + ข้อมูลยื่นแบบ: legal_name, address, tax_id, tax_branch_no, sso_account_no, sso_branch_no, rd_user_id | สาขา default `000000` |
 | `users` | ผู้ใช้ฝั่งเจ้าของ (email unique) | password hash ของ ASP.NET Identity |
 | `memberships` | user ↔ tenant + role (Owner/Manager/Staff) | user 1 คนอยู่ได้หลายร้าน |
 | `branches` | สาขา: `province_code` (ISO 3166-2:TH), `area_code` (รหัสอำเภอ 4 หลัก), geo + รัศมี | ใช้หาค่าแรงขั้นต่ำ |
-| `employees` | pay_type (Monthly/Daily/Hourly/Piece), base_rate, worker_type (Employee/Freelance), language (th/en/my), line_user_id | unique (tenant, line_user_id) |
+| `employees` | pay_type (Monthly/Daily/Hourly/Piece), base_rate, worker_type (Employee/Freelance), language (th/en/my), line_user_id, title (Mr/Mrs/Miss), national_id, address_line/subdistrict/district/province/postal_code | unique (tenant, line_user_id); national_id ซ้ำในร้านไม่ได้ (ตรวจในแอป) |
 | `employee_invites` | code 8 ตัว ใช้ครั้งเดียว หมดอายุ 7 วัน | สร้างใหม่ = ยกเลิกอันเก่า |
 | `legal_rule_sets` | กฎหมายแบบ effective-dated, `payload` jsonb (`LegalRules`) | **ข้อมูลระบบ** ไม่ผูก tenant, seeder sync จากโค้ด |
 | `minimum_wages` | province + area (nullable) + rate + effective_from + `verified` | ข้อมูลระบบ, seed จาก JSON draft |
@@ -19,15 +19,16 @@
 | `advances` | เงินเบิก (ติดลบ = กลับรายการ, ไม่มีลบ) | ยอดค้าง = ผลรวม − ที่หักในรอบที่ lock |
 | `holidays` | วันหยุดตามประเพณีของร้าน | unique (tenant, date) |
 | `opening_balances` | ยอดยกมาต้นปี (taxable income, tax withheld, SSO) ต่อคนต่อปี | แก้ไม่ได้ถ้าปีนั้นมีรอบที่ lock แล้ว |
-| `pay_runs` | period, status (Draft/Locked), `rules_snapshot` jsonb, locked_at/by | ห้ามทับช่วง, ต้องอยู่ในเดือนเดียว |
-| `pay_run_items` | ผลต่อคน: gross, taxable, SSO, WHT, advance, net + `lines`/`warnings`/`input` jsonb | `input` = snapshot ของ `PayInput` |
+| `pay_runs` | period, pay_date, status (Draft/Locked), `rules_snapshot` jsonb, locked_at/by | ห้ามทับช่วง, ต้องอยู่ในเดือนเดียว |
+| `pay_run_items` | ผลต่อคน: gross, taxable, SSO, WHT, advance, net + `lines`/`warnings`/`input` jsonb | `input` = snapshot ของ `PayInput`, warnings = `[{th, en}]` |
+| `shift_templates` | ชื่อกะ, start/end (`time`), break_minutes, color, archived | ลบแม่แบบที่ใช้แล้ว = archived |
+| `shifts` | 1 คน 1 วัน: template (nullable), start/end/break คัดลอกจากแม่แบบ, note | unique (tenant, employee, date); end < start = ข้ามเที่ยงคืน |
 | `audit_logs` | ใคร/อะไร/เมื่อไหร่ ของ entity `IAudited`, `changes` jsonb | เขียนอัตโนมัติ |
 
-Migrations: `InitialCreate` → `AddWorkAndPayRuns` → `AddOpeningBalances` (ห้ามแก้ migration ที่ apply แล้ว — เพิ่มใหม่เสมอ)
+Migrations: `InitialCreate` → `AddWorkAndPayRuns` → `AddOpeningBalances` → `AddFilingInfoAndShifts` (แปลง warnings เดิมเป็น `{th, en}`) (ห้ามแก้ migration ที่ apply แล้ว — เพิ่มใหม่เสมอ)
 
 ## ตารางที่วางแผน (ยังไม่มี)
 ```
-shift_templates, shifts (employee_id, branch_id, start_at, end_at)                 -- Phase 1
 attendance_events (employee_id, type: in|out, at, lat, lng, selfie_key, source)    -- Phase 1
 leave_requests, ot_requests                                                         -- Phase 1
 payslips (pay_run_item_id, sent_at)                                                 -- Phase 1

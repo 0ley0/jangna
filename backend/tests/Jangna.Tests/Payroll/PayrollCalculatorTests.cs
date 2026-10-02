@@ -101,7 +101,7 @@ public class PayrollCalculatorTests
     {
         var r = PayrollCalculator.Calculate(Input(PayBasis.Monthly, 9_000m), Rules2026);
 
-        Assert.Contains(r.Warnings, w => w.Contains("ต่ำกว่าค่าแรงขั้นต่ำ"));
+        Assert.Contains(r.Warnings, w => w.Th.Contains("ต่ำกว่าค่าแรงขั้นต่ำ"));
     }
 
     // ---------- รายวัน / รายชั่วโมง ----------
@@ -211,7 +211,7 @@ public class PayrollCalculatorTests
         var r = PayrollCalculator.Calculate(input, Rules2026);
 
         Assert.Equal(400m, Sum(r, LineCodes.PublicHolidayPay));
-        Assert.Contains(r.Warnings, w => w.Contains("ค่าจ้างรายวันพื้นฐาน"));
+        Assert.Contains(r.Warnings, w => w.Th.Contains("ค่าจ้างรายวันพื้นฐาน"));
     }
 
     [Fact]
@@ -226,7 +226,7 @@ public class PayrollCalculatorTests
         var r = PayrollCalculator.Calculate(input, Rules2026);
 
         Assert.Equal(0m, Sum(r, LineCodes.MinimumWageTopUp));
-        Assert.Single(r.Warnings, w => w.Contains("ไม่มีข้อมูลค่าแรงขั้นต่ำ"));
+        Assert.Single(r.Warnings, w => w.Th.Contains("ไม่มีข้อมูลค่าแรงขั้นต่ำ"));
     }
 
     [Fact]
@@ -236,7 +236,7 @@ public class PayrollCalculatorTests
 
         var r = PayrollCalculator.Calculate(input, Rules2026);
 
-        Assert.Contains(r.Warnings, w => w.Contains("ยังไม่ได้ยืนยัน"));
+        Assert.Contains(r.Warnings, w => w.Th.Contains("ยังไม่ได้ยืนยัน"));
     }
 
     // ---------- ฟรีแลนซ์ / เงินเบิก / สปส. หลายรอบ ----------
@@ -278,7 +278,7 @@ public class PayrollCalculatorTests
         Assert.Equal(717m, r.AdvanceDeducted);
         Assert.Equal(783m, r.AdvanceCarriedOver);
         Assert.Equal(0m, r.Net);
-        Assert.Contains(r.Warnings, w => w.Contains("ยกไปหักรอบถัดไป"));
+        Assert.Contains(r.Warnings, w => w.Th.Contains("ยกไปหักรอบถัดไป"));
     }
 
     [Fact]
@@ -322,7 +322,7 @@ public class PayrollCalculatorTests
             Input(PayBasis.Daily, 400m, Work(1), new DayRecord(new(2026, 11, 1), DayKind.Workday, 8)), Rules2026);
 
         Assert.Equal(400m, r.Gross);
-        Assert.Contains(r.Warnings, w => w.Contains("นอกรอบจ่าย"));
+        Assert.Contains(r.Warnings, w => w.Th.Contains("นอกรอบจ่าย"));
     }
 
     [Fact]

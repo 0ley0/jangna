@@ -11,42 +11,25 @@ import { FormError, SelectField, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
 import { useLang } from "@/lib/i18n";
+import { provinces } from "@/lib/provinces";
 import { keys, useBranches, useEmployees } from "@/lib/queries";
-import { payTypeLabels, payTypeUnit, type Employee, type Invite, type PayType } from "@/lib/types";
+import { payTypeLabels, payTypeUnit, titleLabels, type Employee, type Invite, type PayType, type Title } from "@/lib/types";
+
+/** ข้อมูลที่ไฟล์ สปส.1-10 / ภ.ง.ด.1 ต้องใช้ (ฟรีแลนซ์ไม่เข้า สปส.) */
+const filingIncomplete = (e: Employee) =>
+  e.workerType === "Employee" && (!e.title || !e.nationalId || !e.district || !e.province || !e.postalCode);
 
 export default function EmployeesPage() {
   const { t } = useLang();
   const employees = useEmployees();
-  const branches = useBranches();
-  const queryClient = useQueryClient();
-  const [payType, setPayType] = useState<PayType>("Piece");
+  const [editing, setEditing] = useState<Employee | null>(null);
   const [invite, setInvite] = useState<{ employee: Employee; invite: Invite } | null>(null);
-
-  const create = useMutation<Employee, ApiError, FormData>({
-    mutationFn: (form) =>
-      api<Employee>("/api/employees", {
-        method: "POST",
-        json: {
-          firstName: form.get("firstName"),
-          lastName: form.get("lastName"),
-          nickname: form.get("nickname"),
-          phone: form.get("phone"),
-          branchId: form.get("branchId") || null,
-          payType: form.get("payType"),
-          baseRate: Number(form.get("baseRate") || 0),
-          workerType: form.get("workerType"),
-          language: form.get("language"),
-        },
-      }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: keys.employees }),
-  });
 
   const createInvite = useMutation<Invite, ApiError, Employee>({
     mutationFn: (e) => api<Invite>(`/api/employees/${e.id}/invites`, { method: "POST" }),
     onSuccess: (inv, employee) => setInvite({ employee, invite: inv }),
   });
 
-  const errors = create.error?.fieldErrors;
   const [filter, setFilter] = useState<PayType | "all">("all");
   const shown = employees.data?.filter((e) => filter === "all" || e.payType === filter);
   const filterOptions = [
@@ -58,123 +41,233 @@ export default function EmployeesPage() {
     })),
   ];
 
+  const edit = (e: Employee) => {
+    setEditing(e);
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+  };
+
   return (
     <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("เพิ่มพนักงาน", "Add employee")}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form
-            action={(form) => create.mutate(form)}
-            className="grid gap-4 sm:grid-cols-3"
-            key={create.isSuccess ? create.data.id : "new"}
-          >
-            <div className="sm:col-span-3">
-              <FormError message={errors && Object.keys(errors).length ? null : create.error?.message} />
-            </div>
-            <TextField label={t("ชื่อ", "First name")} name="firstName" errors={errors} required />
-            <TextField label={t("นามสกุล", "Last name")} name="lastName" errors={errors} />
-            <TextField label={t("ชื่อเล่น", "Nickname")} name="nickname" errors={errors} />
-            <TextField label={t("เบอร์โทร", "Phone")} name="phone" type="tel" errors={errors} />
-            <SelectField label={t("สาขา", "Branch")} name="branchId" defaultValue="">
-              <option value="">{t("— ไม่ระบุ —", "— None —")}</option>
-              {branches.data?.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </SelectField>
-            <SelectField label={t("ภาษาใน LINE", "LINE language")} name="language" defaultValue="th">
-              <option value="th">ไทย</option>
-              <option value="en">English</option>
-              <option value="my">မြန်မာ ({t("พม่า", "Burmese")})</option>
-            </SelectField>
-            <SelectField
-              label={t("รูปแบบค่าจ้าง", "Pay type")}
-              name="payType"
-              value={payType}
-              onValueChange={(v) => setPayType(v as PayType)}
-            >
-              {(Object.keys(payTypeLabels) as PayType[]).map((value) => (
-                <option key={value} value={value}>
-                  {t(...payTypeLabels[value])}
-                </option>
-              ))}
-            </SelectField>
-            <TextField
-              label={`${t("อัตรา", "Rate")} (${t(...payTypeUnit[payType])})`}
-              name="baseRate"
-              type="number"
-              min={0}
-              step="0.01"
-              required={payType !== "Piece"}
-              errors={errors}
-            />
-            <SelectField label={t("สถานะการจ้าง", "Employment type")} name="workerType" defaultValue="Employee">
-              <option value="Employee">{t("ลูกจ้าง (เข้าประกันสังคม)", "Employee (social security)")}</option>
-              <option value="Freelance">{t("ฟรีแลนซ์ / จ้างทำของ", "Freelance / contractor")}</option>
-            </SelectField>
-            <div className="sm:col-span-3">
-              <Button type="submit" loading={create.isPending}>
-                {create.isPending ? t("กำลังบันทึก…", "Saving…") : t("เพิ่มพนักงาน", "Add employee")}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+      <EmployeeForm key={editing?.id ?? "new"} employee={editing} onDone={() => setEditing(null)} />
 
       {invite && <InviteCard {...invite} onClose={() => setInvite(null)} />}
 
       <Card>
         <CardContent className="grid gap-3">
           <ChipGroup aria-label={t("กรองตามประเภทค่าจ้าง", "Filter by pay type")} options={filterOptions} value={filter} onChange={setFilter} />
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("ชื่อ", "Name")}</TableHead>
-                <TableHead>{t("สาขา", "Branch")}</TableHead>
-                <TableHead>{t("ค่าจ้าง", "Pay")}</TableHead>
-                <TableHead>LINE</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {shown?.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell className="font-medium">
-                    {e.firstName} {e.lastName}
-                    {e.nickname && <span className="text-muted-foreground"> ({e.nickname})</span>}
-                  </TableCell>
-                  <TableCell>{e.branchName ?? "–"}</TableCell>
-                  <TableCell>
-                    {t(...payTypeLabels[e.payType])}
-                    {e.baseRate > 0 && <span className="text-muted-foreground"> · {e.baseRate.toLocaleString("th-TH")}</span>}
-                  </TableCell>
-                  <TableCell>
-                    {e.lineLinked ? (
-                      <Badge variant="success">{t("ผูกแล้ว", "Linked")}</Badge>
-                    ) : (
-                      <Badge variant="outline">{t("ยังไม่ผูก", "Not linked")}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="outline" size="sm" onClick={() => createInvite.mutate(e)} disabled={createInvite.isPending}>
-                      {e.lineLinked ? t("ผูก LINE ใหม่", "Re-link LINE") : t("ส่งลิงก์ผูก LINE", "Send LINE link")}
-                    </Button>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("ชื่อ", "Name")}</TableHead>
+                  <TableHead>{t("สาขา", "Branch")}</TableHead>
+                  <TableHead>{t("ค่าจ้าง", "Pay")}</TableHead>
+                  <TableHead>LINE</TableHead>
+                  <TableHead />
                 </TableRow>
-              ))}
-              {shown?.length === 0 && (
-                <TableEmpty colSpan={5}>
-                    {t("ยังไม่มีพนักงาน", "No employees yet")}
-                  </TableEmpty>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {shown?.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-medium">
+                      {e.title && <span className="text-muted-foreground">{t(...titleLabels[e.title])} </span>}
+                      {e.firstName} {e.lastName}
+                      {e.nickname && <span className="text-muted-foreground"> ({e.nickname})</span>}
+                      {filingIncomplete(e) && (
+                        <Badge variant="warning" className="ml-2">
+                          {t("ข้อมูลยื่นแบบไม่ครบ", "Filing info missing")}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{e.branchName ?? "–"}</TableCell>
+                    <TableCell>
+                      {t(...payTypeLabels[e.payType])}
+                      {e.baseRate > 0 && <span className="text-muted-foreground"> · {e.baseRate.toLocaleString("th-TH")}</span>}
+                    </TableCell>
+                    <TableCell>
+                      {e.lineLinked ? (
+                        <Badge variant="success">{t("ผูกแล้ว", "Linked")}</Badge>
+                      ) : (
+                        <Badge variant="outline">{t("ยังไม่ผูก", "Not linked")}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <Button variant="ghost" size="sm" onClick={() => edit(e)}>
+                        {t("แก้ไข", "Edit")}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => createInvite.mutate(e)} disabled={createInvite.isPending}>
+                        {e.lineLinked ? t("ผูก LINE ใหม่", "Re-link LINE") : t("ส่งลิงก์ผูก LINE", "Send LINE link")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {shown?.length === 0 && <TableEmpty colSpan={5}>{t("ยังไม่มีพนักงาน", "No employees yet")}</TableEmpty>}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim() || null;
+
+/** ฟอร์มเพิ่ม (employee = null) / แก้ไขพนักงาน */
+function EmployeeForm({ employee, onDone }: { employee: Employee | null; onDone: () => void }) {
+  const { t, lang } = useLang();
+  const branches = useBranches();
+  const queryClient = useQueryClient();
+  const [payType, setPayType] = useState<PayType>(employee?.payType ?? "Piece");
+  const [workerType, setWorkerType] = useState(employee?.workerType ?? "Employee");
+
+  const save = useMutation<Employee, ApiError, FormData>({
+    mutationFn: (form) =>
+      api<Employee>(employee ? `/api/employees/${employee.id}` : "/api/employees", {
+        method: employee ? "PUT" : "POST",
+        json: {
+          firstName: form.get("firstName"),
+          lastName: form.get("lastName"),
+          nickname: form.get("nickname"),
+          phone: form.get("phone"),
+          branchId: form.get("branchId") || null,
+          payType: form.get("payType"),
+          baseRate: Number(form.get("baseRate") || 0),
+          workerType: form.get("workerType"),
+          language: form.get("language"),
+          title: (form.get("title") || null) as Title | null,
+          nationalId: text(form, "nationalId"),
+          addressLine: text(form, "addressLine"),
+          subdistrict: text(form, "subdistrict"),
+          district: text(form, "district"),
+          province: text(form, "province"),
+          postalCode: text(form, "postalCode"),
+        },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: keys.employees });
+      if (employee) onDone();
+    },
+  });
+
+  const errors = save.error?.fieldErrors;
+  const e = employee;
+
+  return (
+    <Card className={e ? "border-brand" : undefined}>
+      <CardHeader>
+        <CardTitle>{e ? `${t("แก้ไข", "Edit")} ${e.firstName} ${e.lastName}`.trim() : t("เพิ่มพนักงาน", "Add employee")}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form action={(form) => save.mutate(form)} className="grid gap-4 sm:grid-cols-3" key={save.isSuccess && !e ? save.data.id : "form"}>
+          <div className="sm:col-span-3">
+            <FormError message={errors && Object.keys(errors).length ? null : save.error?.message} />
+          </div>
+          <TextField label={t("ชื่อ", "First name")} name="firstName" defaultValue={e?.firstName} errors={errors} required />
+          <TextField label={t("นามสกุล", "Last name")} name="lastName" defaultValue={e?.lastName} errors={errors} />
+          <TextField label={t("ชื่อเล่น", "Nickname")} name="nickname" defaultValue={e?.nickname ?? ""} errors={errors} />
+          <TextField label={t("เบอร์โทร", "Phone")} name="phone" type="tel" defaultValue={e?.phone ?? ""} errors={errors} />
+          <SelectField label={t("สาขา", "Branch")} name="branchId" defaultValue={e?.branchId ?? ""}>
+            <option value="">{t("— ไม่ระบุ —", "— None —")}</option>
+            {branches.data?.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </SelectField>
+          <SelectField label={t("ภาษาใน LINE และสลิป", "LINE & payslip language")} name="language" defaultValue={e?.language ?? "th"}>
+            <option value="th">ไทย</option>
+            <option value="en">English</option>
+            <option value="my">မြန်မာ ({t("พม่า — สลิปเป็นอังกฤษไปก่อน", "Burmese — payslip in English for now")})</option>
+          </SelectField>
+          <SelectField label={t("รูปแบบค่าจ้าง", "Pay type")} name="payType" value={payType} onValueChange={(v) => setPayType(v as PayType)}>
+            {(Object.keys(payTypeLabels) as PayType[]).map((value) => (
+              <option key={value} value={value}>
+                {t(...payTypeLabels[value])}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label={`${t("อัตรา", "Rate")} (${t(...payTypeUnit[payType])})`}
+            name="baseRate"
+            type="number"
+            min={0}
+            step="0.01"
+            defaultValue={e?.baseRate || ""}
+            required={payType !== "Piece"}
+            errors={errors}
+          />
+          <SelectField
+            label={t("สถานะการจ้าง", "Employment type")}
+            name="workerType"
+            value={workerType}
+            onValueChange={(v) => setWorkerType(v as Employee["workerType"])}
+          >
+            <option value="Employee">{t("ลูกจ้าง (เข้าประกันสังคม)", "Employee (social security)")}</option>
+            <option value="Freelance">{t("ฟรีแลนซ์ / จ้างทำของ", "Freelance / contractor")}</option>
+          </SelectField>
+
+          <div className="border-t pt-4 sm:col-span-3">
+            <div className="font-medium">{t("ข้อมูลสำหรับยื่น สปส.1-10 และ ภ.ง.ด.1", "For social security and PND 1 filing")}</div>
+            <p className="text-xs text-muted-foreground">
+              {workerType === "Employee"
+                ? t("ไม่บังคับตอนเพิ่ม แต่ต้องมีก่อนออกไฟล์ยื่นแบบ", "Optional now, required before exporting filing files")
+                : t("ฟรีแลนซ์ไม่เข้าประกันสังคม — กรอกไว้ใช้ภายหลังได้", "Freelancers are not insured — optional")}
+            </p>
+          </div>
+          <SelectField label={t("คำนำหน้าชื่อ", "Title")} name="title" defaultValue={e?.title ?? ""}>
+            <option value="">{t("— เลือก —", "— Select —")}</option>
+            {(Object.keys(titleLabels) as Title[]).map((v) => (
+              <option key={v} value={v}>
+                {t(...titleLabels[v])}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label={t("เลขประจำตัวประชาชน", "National ID")}
+            name="nationalId"
+            defaultValue={e?.nationalId ?? ""}
+            inputMode="numeric"
+            maxLength={17}
+            placeholder="1-2345-67890-12-3"
+            hint={t("= เลขประกันสังคม · แรงงานต่างด้าวใช้เลขที่ สปส. ออกให้", "= social security no. · migrant workers use the SSO-issued number")}
+            errors={errors}
+          />
+          <TextField label={t("บ้านเลขที่ / หมู่ / ถนน", "House no. / street")} name="addressLine" defaultValue={e?.addressLine ?? ""} errors={errors} />
+          <TextField label={t("ตำบล / แขวง", "Subdistrict")} name="subdistrict" defaultValue={e?.subdistrict ?? ""} errors={errors} />
+          <TextField label={t("อำเภอ / เขต", "District")} name="district" defaultValue={e?.district ?? ""} errors={errors} />
+          <SelectField label={t("จังหวัด", "Province")} name="province" defaultValue={e?.province ?? ""}>
+            <option value="">{t("— เลือก —", "— Select —")}</option>
+            {/* ภ.ง.ด.1 ต้องการชื่อจังหวัดภาษาไทย → ค่าเป็นชื่อไทยเสมอ */}
+            {provinces.map((p) => (
+              <option key={p.code} value={p.th}>
+                {lang === "en" ? `${p.en} (${p.th})` : p.th}
+              </option>
+            ))}
+          </SelectField>
+          <TextField
+            label={t("รหัสไปรษณีย์", "Postal code")}
+            name="postalCode"
+            defaultValue={e?.postalCode ?? ""}
+            inputMode="numeric"
+            maxLength={5}
+            errors={errors}
+          />
+
+          <div className="flex gap-2 sm:col-span-3">
+            <Button type="submit" variant={e ? "accent" : "default"} loading={save.isPending}>
+              {e ? t("บันทึกการแก้ไข", "Save changes") : t("เพิ่มพนักงาน", "Add employee")}
+            </Button>
+            {e && (
+              <Button type="button" variant="ghost" onClick={onDone}>
+                {t("ยกเลิก", "Cancel")}
+              </Button>
+            )}
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

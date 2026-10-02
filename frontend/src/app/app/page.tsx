@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Avatar, Icon } from "@/components/icons";
+import { Avatar, avatarColors, Icon } from "@/components/icons";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBranches, useEmployees, useMe } from "@/lib/queries";
@@ -157,7 +157,7 @@ export default function OverviewPage() {
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {employees.data.slice(0, 9).map((e, i) => (
                 <li key={e.id} className="flex items-center gap-3 rounded-xl border bg-surface px-3 py-2.5">
-                  <Avatar name={e.nickname ?? e.firstName} color={["#C97B5D", "#8FA284", "#9A6B7E", "#D4A256", "#7A8FA5"][i % 5]} />
+                  <Avatar name={e.nickname ?? e.firstName} color={avatarColors[i % avatarColors.length]} />
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium">
                       {e.firstName} {e.lastName}

@@ -13,7 +13,14 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="QuestPDF" Version="2026.9.1" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- ฟอนต์สลิป PDF (SIL OFL — ดู Fonts/OFL.txt) -->
+    <EmbeddedResource Include="Fonts/*.ttf" />
+  </ItemGroup>
+
 
   <ItemGroup>
     <ProjectReference Include="..\Jangna.Core\Jangna.Core.csproj" />

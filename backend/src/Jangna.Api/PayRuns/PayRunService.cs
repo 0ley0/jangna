@@ -1,3 +1,4 @@
+using Jangna.Api.Localization;
 using Jangna.Core.Entities;
 using Jangna.Infrastructure.Persistence;
 using Jangna.Payroll.Engine.Calculators;
@@ -17,16 +18,18 @@ public sealed class PayRunService(JangnaDbContext db, TimeProvider clock)
 {
     public const int MaxPeriodDays = 31;
 
-    public async Task<PayRun> CreateAsync(DateOnly start, DateOnly end, CancellationToken ct)
+    public async Task<PayRun> CreateAsync(DateOnly start, DateOnly end, DateOnly? payDate, CancellationToken ct)
     {
-        if (end < start) throw new PayRunException("วันสิ้นสุดต้องไม่ก่อนวันเริ่ม", StatusCodes.Status400BadRequest);
+        if (end < start) throw new PayRunException(L.T("วันสิ้นสุดต้องไม่ก่อนวันเริ่ม", "End date must not be before start date"), StatusCodes.Status400BadRequest);
         if (start.Year != end.Year || start.Month != end.Month)
-            throw new PayRunException("รอบจ่ายต้องอยู่ในเดือนเดียวกัน (ประกันสังคมคิดรายเดือน)", StatusCodes.Status400BadRequest);
+            throw new PayRunException(L.T("รอบจ่ายต้องอยู่ในเดือนเดียวกัน (ประกันสังคมคิดรายเดือน)", "A pay run must fall within one calendar month (social security is monthly)"), StatusCodes.Status400BadRequest);
+        ValidatePayDate(start, end, payDate ?? end);
 
         if (await db.PayRuns.AnyAsync(r => r.PeriodStart <= end && start <= r.PeriodEnd, ct))
-            throw new PayRunException("มีรอบจ่ายที่ทับช่วงวันนี้อยู่แล้ว");
+            throw new PayRunException(L.T("มีรอบจ่ายที่ทับช่วงวันนี้อยู่แล้ว", "Another pay run already overlaps these dates"));
         if (await db.PayRuns.AnyAsync(r => r.Status == PayRunStatus.Locked && r.PeriodStart > end, ct))
-            throw new PayRunException("มีรอบจ่ายหลังจากนี้ที่ปิดไปแล้ว — สร้างรอบย้อนหลังไม่ได้ เพราะยอดสะสมภาษี/สปส. จะผิด");
+            throw new PayRunException(L.T("มีรอบจ่ายหลังจากนี้ที่ปิดไปแล้ว — สร้างรอบย้อนหลังไม่ได้ เพราะยอดสะสมภาษี/สปส. จะผิด",
+                "A later pay run is already locked — you cannot add an earlier one because year-to-date tax and social security would be wrong"));
 
         var rules = await ResolveRulesAsync(end, ct);
         var run = new PayRun
@@ -34,6 +37,7 @@ public sealed class PayRunService(JangnaDbContext db, TimeProvider clock)
             PeriodStart = start,
             PeriodEnd = end,
             Status = PayRunStatus.Draft,
+            PayDate = payDate ?? end,
             RuleSetEffectiveFrom = rules.EffectiveFrom,
             RulesSnapshot = rules.Rules,
         };
@@ -64,15 +68,39 @@ public sealed class PayRunService(JangnaDbContext db, TimeProvider clock)
         if (Fingerprint(run) != before)
         {
             await db.SaveChangesAsync(ct);
-            throw new PayRunException("ข้อมูลเปลี่ยนตั้งแต่คำนวณครั้งล่าสุด — คำนวณใหม่ให้แล้ว กรุณาตรวจอีกครั้งก่อนปิดรอบ");
+            throw new PayRunException(L.T("ข้อมูลเปลี่ยนตั้งแต่คำนวณครั้งล่าสุด — คำนวณใหม่ให้แล้ว กรุณาตรวจอีกครั้งก่อนปิดรอบ",
+                "Data changed since the last calculation — it has been recalculated, please review again before locking"));
         }
-        if (run.Items.Count == 0) throw new PayRunException("รอบนี้ไม่มีพนักงานที่ต้องจ่าย");
+        if (run.Items.Count == 0) throw new PayRunException(L.T("รอบนี้ไม่มีพนักงานที่ต้องจ่าย", "Nobody to pay in this pay run"));
 
         run.Status = PayRunStatus.Locked;
         run.LockedAt = clock.GetUtcNow();
         run.LockedBy = userId;
         await db.SaveChangesAsync(ct);
         return run;
+    }
+
+    /// <summary>เปลี่ยนวันจ่ายได้เฉพาะรอบร่าง — รอบที่ปิดแล้วยื่น ภ.ง.ด.1 ตามวันจ่ายนั้นไปแล้ว</summary>
+    public async Task<PayRun> SetPayDateAsync(Guid id, DateOnly payDate, CancellationToken ct)
+    {
+        var run = await LoadDraftAsync(id, ct);
+        ValidatePayDate(run.PeriodStart, run.PeriodEnd, payDate);
+        run.PayDate = payDate;
+        await db.SaveChangesAsync(ct);
+        return run;
+    }
+
+    /// <summary>
+    /// วันจ่ายต้องไม่ก่อนวันเริ่มรอบ และอยู่ในปีเดียวกัน — ยอดสะสมภาษีคิดตามปีของรอบ
+    /// ถ้าจ่ายข้ามปี (ค่าจ้าง ธ.ค. จ่าย ม.ค.) ภ.ง.ด.1 กับยอดสะสมจะไม่ตรงกัน จึงยังไม่รองรับ
+    /// </summary>
+    private static void ValidatePayDate(DateOnly start, DateOnly end, DateOnly payDate)
+    {
+        if (payDate < start || payDate.Year != start.Year || payDate.DayNumber - end.DayNumber > 31)
+            throw new PayRunException(L.T(
+                "วันจ่ายต้องไม่ก่อนวันเริ่มรอบ ไม่เกิน 31 วันหลังสิ้นรอบ และอยู่ในปีเดียวกับรอบ",
+                "Pay date must be on or after the period start, within 31 days of the period end, and in the same year"),
+                StatusCodes.Status400BadRequest);
     }
 
     public async Task DeleteDraftAsync(Guid id, CancellationToken ct)
@@ -91,8 +119,8 @@ public sealed class PayRunService(JangnaDbContext db, TimeProvider clock)
     private async Task<PayRun> LoadDraftAsync(Guid id, CancellationToken ct)
     {
         var run = await db.PayRuns.Include(r => r.Items).SingleOrDefaultAsync(r => r.Id == id, ct)
-                  ?? throw new PayRunException("ไม่พบรอบจ่าย", StatusCodes.Status404NotFound);
-        if (run.Status != PayRunStatus.Draft) throw new PayRunException("รอบนี้ปิดแล้ว แก้ไขไม่ได้");
+                  ?? throw new PayRunException(L.T("ไม่พบรอบจ่าย", "Pay run not found"), StatusCodes.Status404NotFound);
+        if (run.Status != PayRunStatus.Draft) throw new PayRunException(L.T("รอบนี้ปิดแล้ว แก้ไขไม่ได้", "This pay run is locked and cannot be changed"));
         return run;
     }
 
@@ -163,9 +191,11 @@ public sealed class PayRunService(JangnaDbContext db, TimeProvider clock)
 
             var result = PayrollCalculator.Calculate(input, rules);
             var warnings = result.Warnings.ToList();
-            if (employee.Branch is null) warnings.Insert(0, "พนักงานยังไม่ได้ระบุสาขา — ไม่รู้ค่าแรงขั้นต่ำ");
+            if (employee.Branch is null) warnings.Insert(0, new LocalizedText("พนักงานยังไม่ได้ระบุสาขา — ไม่รู้ค่าแรงขั้นต่ำ", "No branch set for this employee — minimum wage unknown"));
             if (start.Month > 1 && ytd.Count == 0 && opening is null && !input.Employee.IsFreelance && result.TaxableIncome > 0)
-                warnings.Add("ยังไม่มียอดสะสมต้นปี — ถ้าพนักงานมีรายได้ก่อนหน้านี้ในปีนี้ ให้กรอก \"ยอดยกมา\" ไม่งั้นภาษีหัก ณ ที่จ่ายจะต่ำไป");
+                warnings.Add(new LocalizedText(
+                    "ยังไม่มียอดสะสมต้นปี — ถ้าพนักงานมีรายได้ก่อนหน้านี้ในปีนี้ ให้กรอก \"ยอดยกมา\" ไม่งั้นภาษีหัก ณ ที่จ่ายจะต่ำไป",
+                    "No year-to-date opening balance — if this employee earned income earlier this year, enter an opening balance or tax withheld will be too low"));
 
             // ไม่มีอะไรต้องจ่ายและไม่มีอะไรให้หัก → ไม่ต้องมีในรอบนี้
             if (result.Lines.Count == 0 && input.OutstandingAdvances == 0) continue;

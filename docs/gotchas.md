@@ -9,6 +9,15 @@
 - **Bash tool เข้า localhost ไม่ได้บางครั้ง** → ยิง API ทดสอบผ่าน PowerShell หรือ Node
 - **งาน background ถูกหยุดตามเวลา** (dev server ที่ Claude รันให้) → รันเองใน terminal ถ้าจะใช้นาน
 
+- **แก้ไฟล์ด้วย `node -e` / heredoc ใน Bash แล้วพัง** เมื่อโค้ดมี backtick หรือ `${...}` (template string ของ TS/C#) → bash ตีความก่อน
+  ใช้ Edit/Write tool หรือเขียนสคริปต์ลงไฟล์ก่อนแล้วค่อย `node file.mjs`
+
+## Export / PDF
+- **TIS-620 (code page 874)** ไม่มีใน .NET โดย default → `Encoding.RegisterProvider(CodePagesEncodingProvider.Instance)` ก่อน `GetEncoding(874)` (ทำใน `SsoFile.Encode`)
+- QuestPDF: ฟอนต์ฝังเป็น EmbeddedResource (`Fonts/*.ttf`) แล้ว register ตอนสร้าง PDF ครั้งแรก — Noto Sans Thai ไม่มีตัวละติน จึงใช้ `FontFamily("Noto Sans", "Noto Sans Thai")` (fallback)
+- QuestPDF **Community license ใช้ฟรีเมื่อรายได้บริษัท < 1 ล้าน USD/ปี** — เกินแล้วต้องซื้อ license
+- `RegisterFont(Stream)` ถูก obsolete ตั้งแต่ 2026.9 → `RegisterFontFromStream`
+
 ## EF Core
 - **id สร้างฝั่งแอป (Guid v7) + เพิ่มผ่าน navigation อย่างเดียว → EF คิดว่าแถวมีอยู่แล้ว แล้ว UPDATE** (DbUpdateConcurrencyException)
   → ต้อง `db.X.Add(entity)` ตรงๆ; และ **อย่า `Add` ซ้ำเข้า navigation** — relationship fixup ใส่ให้เองจาก FK (จะได้รายการซ้ำ)

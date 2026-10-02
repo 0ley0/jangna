@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { Calendar, DateField, DateRangeField, todayIso, type DateRange } from "@/components/date-picker";
-import { Avatar, BrandMark, Icon } from "@/components/icons";
+import { Avatar, avatarColors, BrandMark, Icon } from "@/components/icons";
 import { LangToggle } from "@/components/lang-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -211,7 +211,7 @@ export default function UiPage() {
             <TableRow>
               <TableCell className="font-medium">
                 <span className="flex items-center gap-2">
-                  <Avatar name="สม" color="#C97B5D" size={26} /> สมชาย
+                  <Avatar name="สม" color={avatarColors[0]} size={26} /> สมชาย
                 </span>
               </TableCell>
               <TableCell>
@@ -222,7 +222,7 @@ export default function UiPage() {
             <TableRow>
               <TableCell className="font-medium">
                 <span className="flex items-center gap-2">
-                  <Avatar name="AU" color="#8FA284" size={26} /> Aung
+                  <Avatar name="AU" color={avatarColors[1]} size={26} /> Aung
                 </span>
               </TableCell>
               <TableCell>

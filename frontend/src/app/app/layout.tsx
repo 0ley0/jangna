@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Avatar, BrandMark, Icon } from "@/components/icons";
+import { Avatar, avatarColors, BrandMark, Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { ApiError, getToken, setToken } from "@/lib/api";
 import { useMe } from "@/lib/queries";
@@ -18,9 +18,12 @@ const nav: { href: string; label: Bi; sub: Bi; icon: (p: { size?: number }) => R
   { href: "/app", label: ["ภาพรวม", "Overview"], icon: Icon.Home, sub: ["สรุปร้านและขั้นตอนเริ่มต้น", "Your shop at a glance"] },
   { href: "/app/employees", label: ["พนักงาน", "Employees"], icon: Icon.Users, sub: ["เพิ่มพนักงานและผูก LINE", "Add staff and link LINE"] },
   { href: "/app/work", label: ["บันทึกงาน", "Work log"], icon: Icon.Tasks, sub: ["วันทำงาน OT ลา ผลงานต่อชิ้น และเงินเบิก", "Days, overtime, leave, piece work and advances"] },
-  { href: "/app/pay-runs", label: ["รอบจ่าย", "Pay runs"], icon: Icon.Wallet, sub: ["คำนวณ ตรวจ และปิดรอบเงินเดือน", "Calculate, review and lock payroll"] },
+  { href: "/app/shifts", label: ["กะงาน", "Shifts"], icon: Icon.Clock, sub: ["จัดกะรายสัปดาห์จากแม่แบบกะ", "Plan the week from shift templates"] },
+  { href: "/app/pay-runs", label: ["รอบจ่าย", "Pay runs"], icon: Icon.Wallet, sub: ["คำนวณ ตรวจ ปิดรอบ และออกสลิป", "Calculate, review, lock and issue payslips"] },
+  { href: "/app/filings", label: ["เอกสารนำส่ง", "Filings"], icon: Icon.Doc, sub: ["ไฟล์ สปส.1-10 และ ภ.ง.ด.1 รายเดือน", "Monthly social security and PND 1 files"] },
   { href: "/app/holidays", label: ["วันหยุด", "Holidays"], icon: Icon.Cal, sub: ["วันหยุดตามประเพณีของร้าน", "Your shop's public holidays"] },
   { href: "/app/branches", label: ["สาขา", "Branches"], icon: Icon.Building, sub: ["จังหวัด ค่าแรงขั้นต่ำ และรัศมีลงเวลา", "Province, minimum wage and clock-in radius"] },
+  { href: "/app/settings", label: ["ตั้งค่าร้าน", "Shop settings"], icon: Icon.Settings, sub: ["ชื่อ ที่อยู่ เลขผู้เสียภาษี และบัญชีนายจ้าง สปส.", "Name, address, tax ID and social security account"] },
 ];
 
 const activeItem = (pathname: string) =>
@@ -68,7 +71,7 @@ export default function AppLayout({ children }: LayoutProps<"/app">) {
         {/* ร้านที่กำลังใช้งาน */}
         <div className="px-3 pt-1 pb-3">
           <div className="flex items-center gap-2.5 rounded-xl border bg-surface px-2.5 py-2">
-            <Avatar name={me.data?.tenantName ?? "…"} color="#C97B5D" size={26} />
+            <Avatar name={me.data?.tenantName ?? "…"} color={avatarColors[0]} size={26} />
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13px] font-medium">{me.data?.tenantName ?? "…"}</div>
               <div className="truncate text-[11px] text-muted-foreground">{me.data ? t(...roleLabels[me.data.role]) : ""}</div>

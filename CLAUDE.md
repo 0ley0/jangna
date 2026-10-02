@@ -21,6 +21,7 @@ Backend .NET 10 (`backend/`) · Frontend Next.js 16 (`frontend/`) · Postgres ·
 - `new-ui-page` — หน้าเว็บแบบ Hearth + ข้อความสองภาษา
 - `update-legal-rules` — สปส. / ค่าแรงขั้นต่ำ / ภาษี / OT
 - `payroll-change` — แก้วิธีคำนวณเงินเดือนหรือรอบจ่าย
+- `impeccable` — (ภายนอก, Apache 2.0) ตรวจ/ขัดเกลาดีไซน์หน้าเว็บ: `/impeccable audit|critique|polish ...` — ต้องคงธีม Hearth และกฎใน `new-ui-page`; ครั้งแรกดาวน์โหลด engine ไปที่ `~/.impeccable`
 
 ## กฎที่ห้ามพลาด
 - เงิน `decimal`, วันที่ `DateOnly` / ISO `yyyy-mm-dd` (frontend ห้าม `toISOString()` กับวันที่)

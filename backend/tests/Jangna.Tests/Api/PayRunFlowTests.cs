@@ -67,7 +67,7 @@ public class PayRunFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
         Assert.Contains(item.Lines, l => l.Code == LineCodes.MinimumWageTopUp && l.Amount == 150m);
         Assert.Equal(83m, item.SocialSecurityEmployee);
         Assert.Equal(817m, item.Net);
-        Assert.Contains(item.Warnings, w => w.Contains("ยังไม่ได้ยืนยัน")); // seed ค่าแรงขั้นต่ำเป็น draft
+        Assert.Contains(item.Warnings, w => w.Th.Contains("ยังไม่ได้ยืนยัน")); // seed ค่าแรงขั้นต่ำเป็น draft
         Assert.Equal(PayRunStatus.Draft, run.Summary.Status);
     }
 
@@ -94,7 +94,7 @@ public class PayRunFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         var run = await Shop.Read(await shop.CreateRun(1, 31));
 
-        Assert.Contains(Assert.Single(run.Items).Warnings, w => w.Contains("ยังไม่ได้ระบุสาขา"));
+        Assert.Contains(Assert.Single(run.Items).Warnings, w => w.Th.Contains("ยังไม่ได้ระบุสาขา"));
     }
 
     [Fact]
@@ -220,7 +220,7 @@ public class PayRunFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
         var without = await Shop.Read(await shop.CreateRun(1, 31));
         var item = without.Items.Single();
         Assert.Equal(0m, item.WithholdingTax); // ประมาณทั้งปีแค่ 3 เดือน = 150k
-        Assert.Contains(item.Warnings, w => w.Contains("ยอดยกมา"));
+        Assert.Contains(item.Warnings, w => w.Th.Contains("ยอดยกมา"));
 
         (await shop.Http.PutAsJsonAsync("/api/opening-balances",
             new WorkEndpoints.OpeningBalanceRequest(e, 2026, 450_000m, 0m, 7_875m, "จากระบบเดิม"))).EnsureSuccessStatusCode();
@@ -228,7 +228,7 @@ public class PayRunFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
 
         // เหมือนเคสใน engine: ทั้งปี 20,450 ยังไม่ได้หัก → หักใน 3 รอบที่เหลือ
         Assert.Equal(6_816.67m, with.Items.Single().WithholdingTax);
-        Assert.DoesNotContain(with.Items.Single().Warnings, w => w.Contains("ยอดยกมา"));
+        Assert.DoesNotContain(with.Items.Single().Warnings, w => w.Th.Contains("ยอดยกมา"));
     }
 
     [Fact]

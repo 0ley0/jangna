@@ -10,6 +10,31 @@ public enum Role
 public sealed class Tenant : Entity
 {
     public required string Name { get; set; }
+
+    // ---------- ข้อมูลนายจ้างสำหรับยื่นแบบ (ไม่บังคับจนกว่าจะ export) ----------
+
+    /// <summary>ชื่อจดทะเบียน/ชื่อสถานประกอบการตามที่ สปส./สรรพากร รู้จัก (ว่าง = ใช้ Name)</summary>
+    public string? LegalName { get; set; }
+
+    /// <summary>ที่อยู่ที่พิมพ์บนสลิป</summary>
+    public string? Address { get; set; }
+
+    /// <summary>เลขประจำตัวผู้เสียภาษี 13 หลัก (บุคคลธรรมดา = เลขบัตรประชาชน)</summary>
+    public string? TaxId { get; set; }
+
+    /// <summary>สาขาตาม ภ.พ.20 6 หลัก — สำนักงานใหญ่ = 000000</summary>
+    public string TaxBranchNo { get; set; } = "000000";
+
+    /// <summary>เลขที่บัญชีนายจ้าง สปส. 10 หลัก</summary>
+    public string? SsoAccountNo { get; set; }
+
+    /// <summary>ลำดับที่สาขา สปส. 6 หลัก — สำนักงานใหญ่ = 000000</summary>
+    public string SsoBranchNo { get; set; } = "000000";
+
+    /// <summary>User ID ระบบยื่นแบบออนไลน์ของกรมสรรพากร — ใส่ในไฟล์ ภ.ง.ด.1 (USER_ID)</summary>
+    public string? RdUserId { get; set; }
+
+    public string DisplayName => string.IsNullOrWhiteSpace(LegalName) ? Name : LegalName;
 }
 
 public sealed class User : Entity

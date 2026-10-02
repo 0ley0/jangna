@@ -14,7 +14,8 @@ Token อยู่ใน `src/app/globals.css` — **ใช้ class จาก t
 | พื้นครีม / การ์ด | `bg-background` / `bg-card`, `bg-surface` |
 | เบจ (hover, muted) | `bg-muted`, `bg-secondary`, `bg-beige-2`, `bg-cream-2` |
 | ตัวอักษร | `text-foreground` (หมึก), `text-ink-2`, `text-muted-foreground` |
-| แบรนด์ เทอร์ราคอตต้า | `bg-brand`, `text-brand`, `text-brand-strong`, `bg-brand-soft text-brand-ink` |
+| แบรนด์ เทอร์ราคอตต้า | `bg-brand` / `border-brand` / `ring-brand` (ตกแต่ง, ขอบ, โฟกัส — คอนทราสต์กับครีมแค่ ~3:1 **ห้ามใช้เป็นพื้นของตัวอักษร**), `text-brand-strong` (ตัวอักษรเล็กบนพื้นสว่าง), `bg-brand-action` + `text-brand-foreground` (พื้นปุ่ม/ช่วงวันที่ที่มีตัวอักษรทับ), `bg-brand-soft text-brand-ink` |
+| แท็กสี Chip | `bg-plum-soft text-plum-ink`, `bg-blue-soft text-blue-ink` (สลับตามโหมดมืดเอง) |
 | แท็ก | `bg-sage-soft text-sage-ink` (สำเร็จ), `bg-amber-soft text-amber-ink` (เตือน) |
 | เส้นขอบ | `border` (= hairline `#E6D9BF`) |
 | เงา | `shadow-card`, `shadow-pop` (popover), `shadow-ink` (ปุ่มหมึก), `shadow-brand` |
@@ -22,6 +23,9 @@ Token อยู่ใน `src/app/globals.css` — **ใช้ class จาก t
 | โหมดมืด | class `.dark` = palette "dusk" (ยังไม่มีปุ่มสลับ) |
 
 ฟอนต์: **Noto Sans Thai** ฟอนต์เดียว (มีตัวละตินในตัว, variable weight — `next/font` ใน `app/layout.tsx`) · การ์ดมุม 18px · ปุ่ม/อินพุต `rounded-xl`
+
+**คอนทราสต์ (WCAG 2.1 AA — เป้าหมายของโปรดักต์):** ตัวอักษรปกติ ≥ 4.5:1, ใหญ่/ไอคอน ≥ 3:1 — `text-muted-foreground` ผ่านแล้วทั้งโหมดสว่าง/มืด; สีอวาตาร์ใช้ `avatarColors` จาก `components/icons.tsx`
+**จอสัมผัส:** `globals.css` ขยายพื้นที่กด Button / Select / Chip เป็น ≥ 44px อัตโนมัติด้วย `(pointer: coarse)` · **ลด motion:** `prefers-reduced-motion` เหลือแค่ fade (ไม่เลื่อน/ซูม)
 
 ## Component (`src/components/`) — ดูตัวอย่างทุกตัวที่ **http://localhost:3000/ui**
 | component | ไฟล์ | ใช้ |
@@ -54,9 +58,10 @@ provinceName(code, lang)                 // lib/provinces.ts มีชื่อ�
 ```
 - ข้อความใหม่ทุกข้อความต้องผ่าน `t()` — อย่าเขียนไทยลอยๆ ใน JSX
 - ภาษาเก็บใน localStorage (`jangna.lang`), server render เป็นไทย
-- **ข้อความจาก backend ยังเป็นไทย** (validation, warnings รอบจ่าย) — รายการในสลิปแปลจากรหัส `code`
+- ข้อความจาก backend: error/validation มาตามภาษาหน้าจอ (`api()` ส่ง `Accept-Language` ให้เอง); คำเตือนรอบจ่าย/ข้อมูลที่ขาดเป็น `LocalizedText` → `t(w.th, w.en)`; รายการในสลิปแปลจากรหัส `code`
 - ข้อความที่ส่งให้พนักงาน (เช่น ลิงก์เชิญ) ใช้ `employee.language` ไม่ใช่ภาษาหน้าจอ
 
 ## API client
-`lib/api.ts`: `api<T>(path, { method, json })` แนบ token อัตโนมัติ, error → `ApiError(message, status, fieldErrors)`
+`lib/api.ts`: `api<T>(path, { method, json })` แนบ token + `Accept-Language` อัตโนมัติ, error → `ApiError(message, status, fieldErrors)`
+`downloadFile(path, fallbackName)` = ดาวน์โหลดไฟล์ (PDF/txt) พร้อม token แล้วตั้งชื่อตาม `Content-Disposition` (CORS expose header นี้แล้ว)
 401 → ล้าง token แล้ว `app/app/layout.tsx` พาไปหน้า login · query keys รวมใน `lib/queries.ts`

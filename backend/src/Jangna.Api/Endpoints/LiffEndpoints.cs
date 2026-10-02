@@ -1,4 +1,5 @@
 using Jangna.Api.Line;
+using Jangna.Api.Localization;
 using Jangna.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,7 +25,7 @@ public static class LiffEndpoints
                 .Include(i => i.Employee)
                 .SingleOrDefaultAsync(i => i.Code == code.ToUpperInvariant(), ct);
             if (invite is null || !invite.IsUsable(clock.GetUtcNow()))
-                return Results.Problem("ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว", statusCode: StatusCodes.Status404NotFound);
+                return Results.Problem(L.T("ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว", "This invite link is invalid or has expired"), statusCode: StatusCodes.Status404NotFound);
 
             var shop = await db.Tenants.SingleAsync(t => t.Id == invite.TenantId, ct);
             return Results.Ok(new InvitePreview(shop.Name, invite.Employee!.FirstName, invite.ExpiresAt));
@@ -35,20 +36,20 @@ public static class LiffEndpoints
         {
             var profile = await verifier.VerifyAsync(req.IdToken, ct);
             if (profile is null)
-                return Results.Problem("ยืนยันตัวตน LINE ไม่สำเร็จ", statusCode: StatusCodes.Status401Unauthorized);
+                return Results.Problem(L.T("ยืนยันตัวตน LINE ไม่สำเร็จ", "Could not verify your LINE account"), statusCode: StatusCodes.Status401Unauthorized);
 
             var now = clock.GetUtcNow();
             var invite = await db.EmployeeInvites.IgnoreQueryFilters()
                 .Include(i => i.Employee)
                 .SingleOrDefaultAsync(i => i.Code == req.Code.ToUpperInvariant(), ct);
             if (invite is null || !invite.IsUsable(now))
-                return Results.Problem("ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว", statusCode: StatusCodes.Status404NotFound);
+                return Results.Problem(L.T("ลิงก์เชิญไม่ถูกต้องหรือหมดอายุแล้ว", "This invite link is invalid or has expired"), statusCode: StatusCodes.Status404NotFound);
 
             var employee = invite.Employee!;
             var takenByOther = await db.Employees.IgnoreQueryFilters()
                 .AnyAsync(e => e.TenantId == invite.TenantId && e.LineUserId == profile.UserId && e.Id != employee.Id, ct);
             if (takenByOther)
-                return Results.Problem("บัญชี LINE นี้ผูกกับพนักงานคนอื่นในร้านนี้แล้ว", statusCode: StatusCodes.Status409Conflict);
+                return Results.Problem(L.T("บัญชี LINE นี้ผูกกับพนักงานคนอื่นในร้านนี้แล้ว", "This LINE account is already linked to another employee in this shop"), statusCode: StatusCodes.Status409Conflict);
 
             employee.LineUserId = profile.UserId;
             employee.LineLinkedAt = now;

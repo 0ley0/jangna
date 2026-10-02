@@ -2,6 +2,7 @@ using System.Text.Json.Serialization;
 using Jangna.Api.Auth;
 using Jangna.Api.Endpoints;
 using Jangna.Api.Line;
+using Jangna.Api.Localization;
 using Jangna.Core.Entities;
 using Jangna.Core.Tenancy;
 using Jangna.Infrastructure;
@@ -29,6 +30,7 @@ builder.Services.AddProblemDetails(o =>
 });
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<Jangna.Api.PayRuns.PayRunService>();
+builder.Services.AddScoped<Jangna.Api.Exports.ExportService>();
 
 // Persistence + tenancy
 builder.Services.AddHttpContextAccessor();
@@ -74,7 +76,8 @@ else
 builder.Services.AddCors(o => o.AddDefaultPolicy(p => p
     .WithOrigins(config["Frontend:Origin"] ?? "http://localhost:3000")
     .AllowAnyHeader()
-    .AllowAnyMethod()));
+    .AllowAnyMethod()
+    .WithExposedHeaders("Content-Disposition"))); // ชื่อไฟล์ตอนดาวน์โหลด
 
 var app = builder.Build();
 
@@ -91,6 +94,7 @@ if (config.GetValue<bool>("Database:MigrateOnStartup"))
     await LegalDataSeeder.SeedAsync(db, Path.Combine(AppContext.BaseDirectory, "Seed", "minimum-wages.draft.json"));
 }
 
+app.UseRequestLanguage(); // Accept-Language: en → ข้อความ error ภาษาอังกฤษ
 app.UseExceptionHandler();
 app.UseCors();
 app.UseAuthentication();
@@ -105,7 +109,9 @@ app.MapGroup("/api")
     .MapLiffEndpoints()
     .MapLegalEndpoints()
     .MapWorkEndpoints()
-    .MapPayRunEndpoints();
+    .MapPayRunEndpoints()
+    .MapExportEndpoints()
+    .MapShiftEndpoints();
 
 app.Run();
 

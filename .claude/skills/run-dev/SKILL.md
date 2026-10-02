@@ -30,7 +30,8 @@ for ($i = 0; $i -lt 45; $i++) { try { Invoke-RestMethod http://127.0.0.1:5099/he
 ## 3. ข้อมูลตัวอย่าง + ตรวจ
 ```powershell
 Set-Location C:\Charp\jangna; node scripts/seed-demo.mjs      # demo@jangna.local / demo1234 (รันซ้ำได้)
-node scripts/smoke-test.mjs                                    # 11 ขั้น กับ Postgres จริง — ต้องผ่านก่อนบอกว่า "ใช้ได้"
+node scripts/smoke-test.mjs                                    # 16 ขั้น กับ Postgres จริง (รวมไฟล์ยื่นแบบ สลิป กะงาน) — ต้องผ่านก่อนบอกว่า "ใช้ได้"
+# ดูหน้าตาสลิป: JANGNA_SLIP_OUT=slips.pdf node scripts/smoke-test.mjs
 ```
 
 ## 4. บอกผู้ใช้

@@ -35,9 +35,22 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
     public DbSet<PayRunItem> PayRunItems => Set<PayRunItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OpeningBalance> OpeningBalances => Set<OpeningBalance>();
+    public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
+    public DbSet<Shift> Shifts => Set<Shift>();
 
     protected override void OnModelCreating(ModelBuilder b)
     {
+        b.Entity<Tenant>(e =>
+        {
+            e.Property(x => x.LegalName).HasMaxLength(200);
+            e.Property(x => x.Address).HasMaxLength(500);
+            e.Property(x => x.TaxId).HasMaxLength(13);
+            e.Property(x => x.TaxBranchNo).HasMaxLength(6);
+            e.Property(x => x.SsoAccountNo).HasMaxLength(10);
+            e.Property(x => x.SsoBranchNo).HasMaxLength(6);
+            e.Property(x => x.RdUserId).HasMaxLength(20);
+        });
+
         b.Entity<User>(e =>
         {
             e.HasIndex(x => x.Email).IsUnique();
@@ -63,6 +76,13 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
             e.Property(x => x.WorkerType).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
             e.Property(x => x.Language).HasMaxLength(5);
+            e.Property(x => x.Title).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.NationalId).HasMaxLength(13);
+            e.Property(x => x.AddressLine).HasMaxLength(300);
+            e.Property(x => x.Subdistrict).HasMaxLength(50);
+            e.Property(x => x.District).HasMaxLength(50);
+            e.Property(x => x.Province).HasMaxLength(50);
+            e.Property(x => x.PostalCode).HasMaxLength(5);
             e.HasIndex(x => new { x.TenantId, x.LineUserId }).IsUnique().HasFilter("line_user_id IS NOT NULL");
         });
 
@@ -130,6 +150,20 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
             e.Property(x => x.TaxableIncome).HasPrecision(14, 2);
             e.Property(x => x.TaxWithheld).HasPrecision(14, 2);
             e.Property(x => x.SocialSecurity).HasPrecision(14, 2);
+        });
+
+        b.Entity<ShiftTemplate>(e =>
+        {
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.Color).HasMaxLength(20);
+        });
+
+        b.Entity<Shift>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId, x.Date }).IsUnique();
+            e.HasIndex(x => new { x.TenantId, x.Date });
+            e.HasOne(x => x.ShiftTemplate).WithMany().OnDelete(DeleteBehavior.SetNull);
+            e.Ignore(x => x.Hours);
         });
 
         b.Entity<AuditLog>(e =>

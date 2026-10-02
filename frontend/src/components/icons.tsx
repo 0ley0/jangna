@@ -53,6 +53,10 @@ export const Icon = {
   Building: make(<><path d="M4.5 20V6.5A1.5 1.5 0 0 1 6 5h7a1.5 1.5 0 0 1 1.5 1.5V20" /><path d="M14.5 10H18a1.5 1.5 0 0 1 1.5 1.5V20" /><path d="M3 20h18M8 9h3M8 12.5h3M8 16h3" /></>),
   Box: make(<><path d="M3.5 8 12 4l8.5 4v8L12 20l-8.5-4z" /><path d="M3.5 8 12 12l8.5-4M12 12v8" /></>),
   Logout: make(<><path d="M14 4.5h3.5A1.5 1.5 0 0 1 19 6v12a1.5 1.5 0 0 1-1.5 1.5H14" /><path d="M10 16l-4-4 4-4M6 12h9" /></>),
+  Doc: make(<><path d="M6.5 3.5h7l4 4v12a1 1 0 0 1-1 1h-10a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z" /><path d="M13.5 3.5v4h4M8.5 12.5h7M8.5 16h5" /></>),
+  Download: make(<><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5" /><path d="M4.5 16.5v2a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-2" /></>),
+  Settings: make(<><circle cx="12" cy="12" r="3" /><path d="M12 3.5v2.2M12 18.3v2.2M3.5 12h2.2M18.3 12h2.2M6 6l1.6 1.6M16.4 16.4 18 18M6 18l1.6-1.6M16.4 7.6 18 6" /></>),
+  Copy: make(<><rect x="8.5" y="8.5" width="11" height="11" rx="2.5" /><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" /></>),
   Line: make(<><path d="M12 4C7 4 3.5 7.2 3.5 11c0 2.4 1.4 4.5 3.6 5.8-.2 1.1-.7 2.3-1.1 3.2 1.6-.4 3.3-1.3 4.5-2.2.5.1 1 .2 1.5.2 5 0 8.5-3.2 8.5-7S17 4 12 4z" /></>),
 };
 
@@ -77,7 +81,10 @@ export function BrandMark({ size = 32 }: { size?: number }) {
   );
 }
 
-export function Avatar({ name, color = "#8B6F56", size = 30 }: { name: string; color?: string; size?: number }) {
+/** สีพื้นอวาตาร์ — เข้มพอให้ตัวอักษรครีมทับได้ผ่าน AA (≥ 4.8:1) */
+export const avatarColors = ["#A45A3D", "#5F7355", "#86576B", "#8A6420", "#566B82"];
+
+export function Avatar({ name, color = "#7D6249", size = 30 }: { name: string; color?: string; size?: number }) {
   const initials = name.trim().slice(0, 2).toUpperCase();
   return (
     <span

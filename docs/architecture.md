@@ -24,7 +24,7 @@ jangna/
     src/Jangna.Payroll.Engine   pure: Rules/ (LegalRules, RuleResolver), Model/ (PayInput, PayResult), Calculators/
     src/Jangna.Core             Entities/, Tenancy/ITenantContext — อ้างอิง Engine อย่างเดียว
     src/Jangna.Infrastructure   Persistence/ (JangnaDbContext, Migrations), Seed/ (LegalDataSeeder + minimum-wages.draft.json)
-    src/Jangna.Api              Program.cs, Auth/, Line/, Endpoints/*, PayRuns/PayRunService
+    src/Jangna.Api              Program.cs, Auth/, Line/, Localization/L, Endpoints/*, PayRuns/PayRunService, Exports/ (SsoFile, Pnd1File, PayslipPdf, ExportService), Fonts/ (Noto, OFL)
     tests/Jangna.Tests          Payroll/ (engine), Infrastructure/ (tenant), Api/ (WebApplicationFactory + InMemory)
   frontend/src/
     app/(auth)/login|register   app/app/* (หลัง login)   app/liff/join (พนักงาน)
@@ -42,7 +42,10 @@ jangna/
 | `/liff/invites/{code}`, `/liff/join` | LiffEndpoints | anonymous (ยืนยันด้วย LINE ID token) |
 | `/legal/rules`, `/legal/minimum-wage` | LegalEndpoints | login |
 | `/work-days`, `/piece-work`, `/advances`, `/holidays`, `/opening-balances` | WorkEndpoints | Manager+ (วันหยุด/ยอดยกมา = Owner) |
-| `/pay-runs`, `/{id}/recalculate`, `/{id}/lock` | PayRunEndpoints | Manager+ (lock = Owner) |
+| `/pay-runs`, `/{id}/recalculate`, `/{id}/pay-date`, `/{id}/lock` | PayRunEndpoints | Manager+ (lock = Owner) |
+| `/pay-runs/{id}/payslips`, `/exports/summary`, `/exports/sso`, `/exports/pnd1` | ExportEndpoints | Manager+ (รอบที่ปิดแล้วเท่านั้น) |
+| `/shift-templates`, `/shifts`, `/shifts/copy-week` | ShiftEndpoints | Manager+ |
+| `/shop` | OrgEndpoints | login (แก้ = Owner) |
 
 Fallback policy: ทุก endpoint ต้อง login + มี `tenant_id` claim ยกเว้นที่ `AllowAnonymous`
 
@@ -52,6 +55,11 @@ Fallback policy: ทุก endpoint ต้อง login + มี `tenant_id` clai
 - `SaveChanges` เติม `TenantId` ให้แถวใหม่ และ **throw ถ้าเขียนข้าม tenant** / บันทึกโดยไม่มี tenant
 - tenant มาจาก JWT claim `tenant_id` (`HttpTenantContext`) — request anonymous = ไม่มี tenant = query ไม่เห็นอะไร
 - endpoint anonymous ที่ต้องหาข้อมูลร้าน (LIFF) ใช้ `IgnoreQueryFilters()` อย่างตั้งใจ แล้วหาเองจาก invite code
+
+## สองภาษา (backend)
+- `Localization/L.cs`: `L.T("ไทย", "English")` เลือกตาม `Accept-Language` (middleware `UseRequestLanguage`, ค่าเริ่มต้นไทย) — เปลี่ยนแค่ **UICulture** (CurrentCulture คงเดิม ไม่งั้นวันที่เป็น พ.ศ.)
+- ข้อความที่ **เก็บลง DB** (คำเตือนรอบจ่าย, รายการข้อมูลที่ขาด) เป็น `LocalizedText(Th, En)` แทน → สลับภาษาหน้าจอได้ทันทีไม่ต้องโหลดใหม่
+- ข้อความใหม่ใน endpoint/service ต้องผ่าน `L.T(...)` เสมอ
 
 ## Audit log
 entity ที่ implement `IAudited` (WorkDay, PieceWorkEntry, Advance, Holiday, Employee, PayRun, OpeningBalance)
