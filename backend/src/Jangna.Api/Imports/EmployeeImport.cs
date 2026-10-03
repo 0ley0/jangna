@@ -33,7 +33,7 @@ public static class EmployeeImport
     private enum Col
     {
         FirstName = 1, LastName, Nickname, Phone, Branch, PayType, Rate, WorkerType, Language,
-        Title, NationalId, AddressLine, Subdistrict, District, Province, PostalCode,
+        Title, NationalId, AddressLine, Subdistrict, District, Province, PostalCode, WorkPolicy,
     }
 
     private static readonly string[] Headers =
@@ -41,7 +41,7 @@ public static class EmployeeImport
         "ชื่อ * (First name)", "นามสกุล (Last name)", "ชื่อเล่น (Nickname)", "เบอร์โทร (Phone)", "สาขา (Branch)",
         "รูปแบบค่าจ้าง * (Pay type)", "อัตรา (Rate)", "สถานะการจ้าง (Employment)", "ภาษา (Language)",
         "คำนำหน้า (Title)", "เลขประจำตัวประชาชน (National ID)", "บ้านเลขที่/ถนน (Address)", "ตำบล/แขวง (Subdistrict)",
-        "อำเภอ/เขต (District)", "จังหวัด (Province)", "รหัสไปรษณีย์ (Postal code)",
+        "อำเภอ/เขต (District)", "จังหวัด (Province)", "รหัสไปรษณีย์ (Postal code)", "นโยบายการทำงาน (Work policy)",
     ];
 
     private static readonly string[] PayTypeChoices = ["รายเดือน", "รายวัน", "รายชั่วโมง", "ต่อชิ้น"];
@@ -51,7 +51,7 @@ public static class EmployeeImport
 
     // ---------- template ----------
 
-    public static byte[] BuildTemplate(IReadOnlyList<string> branchNames)
+    public static byte[] BuildTemplate(IReadOnlyList<string> branchNames, IReadOnlyList<string> policyNames)
     {
         using var wb = new XLWorkbook();
         var ws = wb.AddWorksheet(DataSheet);
@@ -78,6 +78,7 @@ public static class EmployeeImport
         List(ws, Col.Language, LanguageChoices);
         List(ws, Col.Title, TitleChoices);
         if (branchNames.Count > 0) List(ws, Col.Branch, branchNames);
+        if (policyNames.Count > 0) List(ws, Col.WorkPolicy, policyNames);
 
         var help = wb.AddWorksheet("วิธีกรอก (Guide)");
         help.Column(1).Width = 30;
@@ -94,6 +95,7 @@ public static class EmployeeImport
             ("สาขา", "ต้องตรงกับชื่อสาขาที่สร้างไว้ในระบบ — ว่าง = ไม่ระบุ"),
             ("คำนำหน้า", "นาย / นาง / นางสาว (Mr / Mrs / Miss) — ใช้ในไฟล์ สปส. และ ภ.ง.ด."),
             ("เลขประจำตัวประชาชน", "13 หลัก (ใส่ขีดได้) ตรวจ check digit และห้ามซ้ำกับพนักงานเดิม/แถวอื่นในไฟล์"),
+            ("นโยบายการทำงาน", "ต้องตรงกับชื่อนโยบายที่สร้างไว้ในระบบ (หน้านโยบายงาน) — ว่าง = ไม่กำหนด ใช้สร้างตารางกะอัตโนมัติ"),
             ("ที่อยู่", "ภ.ง.ด.1 ต้องมี อำเภอ/เขต จังหวัด รหัสไปรษณีย์ 5 หลัก — ไม่บังคับตอนนำเข้า แต่ต้องมีก่อนออกไฟล์ยื่นแบบ"),
             ("จำกัด", $"ไม่เกิน {MaxRows} แถวต่อไฟล์ ขนาดไม่เกิน 2 MB ถ้ามีแถวผิดแม้แถวเดียว จะไม่นำเข้าเลย — แก้ไฟล์แล้วอัปโหลดใหม่"),
             ("ตัวอย่าง (Example)", "สมชาย | ใจดี | ชาย | 0812345678 | (สาขา) | รายวัน | 400 | ลูกจ้าง | th | นาย | 1101700203450 | 12/3 หมู่ 4 | พญาไท | ราชเทวี | กรุงเทพมหานคร | 10400"),
@@ -143,6 +145,7 @@ public static class EmployeeImport
             if (last - 1 > MaxRows) throw new ImportException(L.T($"นำเข้าได้ไม่เกิน {MaxRows} แถวต่อไฟล์", $"At most {MaxRows} rows per file"));
 
             var branches = await db.Branches.AsNoTracking().ToListAsync(ct);
+            var policies = await db.WorkPolicies.AsNoTracking().Where(p => !p.Archived).ToListAsync(ct);
             var seenIds = new Dictionary<string, int>();
 
             var results = new List<RowResult>();
@@ -184,10 +187,18 @@ public static class EmployeeImport
                     else branchId = branch.Id;
                 }
 
+                Guid? policyId = null;
+                if (Get(Col.WorkPolicy) is { Length: > 0 } policyName)
+                {
+                    var policy = policies.FirstOrDefault(p => string.Equals(p.Name.Trim(), policyName, StringComparison.OrdinalIgnoreCase));
+                    if (policy is null) errors.Add(L.T($"ไม่พบนโยบายการทำงาน \"{policyName}\" — ต้องตรงกับชื่อในระบบ", $"Work policy \"{policyName}\" not found — it must match a policy name in the system"));
+                    else policyId = policy.Id;
+                }
+
                 var language = Get(Col.Language).ToLowerInvariant();
                 var request = new EmployeeRequest(first, Get(Col.LastName), Get(Col.Nickname), Get(Col.Phone), branchId,
                     payType ?? PayType.Monthly, rate, workerType ?? WorkerType.Employee, language is "" ? null : language,
-                    title, Get(Col.NationalId), Get(Col.AddressLine), Get(Col.Subdistrict), Get(Col.District), Get(Col.Province), Get(Col.PostalCode));
+                    title, Get(Col.NationalId), Get(Col.AddressLine), Get(Col.Subdistrict), Get(Col.District), Get(Col.Province), Get(Col.PostalCode), policyId);
 
                 // ตรวจด้วยกฎเดียวกับฟอร์ม (ซ้ำกับพนักงานที่มีอยู่ใน DB รวมอยู่แล้ว) แล้วเติมกฎเฉพาะไฟล์: ซ้ำกันเองในไฟล์
                 foreach (var message in (await EmployeeEndpoints.ValidationErrorsAsync(request, null, db, ct)).Values.SelectMany(v => v))

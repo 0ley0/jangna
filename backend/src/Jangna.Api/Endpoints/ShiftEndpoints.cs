@@ -56,12 +56,12 @@ public static class ShiftEndpoints
             return Results.Ok(ToDto(template));
         });
 
-        // ถูกใช้ในตารางกะแล้ว → เก็บเข้าคลัง (archived) แทนการลบ ประวัติจะได้ไม่หาย
+        // ถูกใช้ในตารางกะหรือนโยบายการทำงานแล้ว → เก็บเข้าคลัง (archived) แทนการลบ ประวัติจะได้ไม่หาย
         manager.MapDelete("/shift-templates/{id:guid}", async (Guid id, JangnaDbContext db, CancellationToken ct) =>
         {
             var template = await db.ShiftTemplates.FindAsync([id], ct);
             if (template is null) return Results.NotFound();
-            if (await db.Shifts.AnyAsync(s => s.ShiftTemplateId == id, ct)) template.Archived = true;
+            if (await db.Shifts.AnyAsync(s => s.ShiftTemplateId == id, ct) || await db.WorkPolicyDays.AnyAsync(d => d.ShiftTemplateId == id, ct)) template.Archived = true;
             else db.ShiftTemplates.Remove(template);
             await db.SaveChangesAsync(ct);
             return Results.NoContent();

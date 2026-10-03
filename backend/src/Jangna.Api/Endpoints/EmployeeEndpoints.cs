@@ -17,13 +17,14 @@ public static class EmployeeEndpoints
         string FirstName, string? LastName, string? Nickname, string? Phone, Guid? BranchId,
         PayType PayType, decimal BaseRate, WorkerType WorkerType, string? Language,
         Title? Title = null, string? NationalId = null, string? AddressLine = null, string? Subdistrict = null,
-        string? District = null, string? Province = null, string? PostalCode = null);
+        string? District = null, string? Province = null, string? PostalCode = null, Guid? WorkPolicyId = null);
 
     public sealed record EmployeeDto(
         Guid Id, string FirstName, string LastName, string? Nickname, string? Phone, Guid? BranchId, string? BranchName,
         PayType PayType, decimal BaseRate, WorkerType WorkerType, EmployeeStatus Status, string Language,
         bool LineLinked, DateTimeOffset? LineLinkedAt,
-        Title? Title, string? NationalId, string? AddressLine, string? Subdistrict, string? District, string? Province, string? PostalCode);
+        Title? Title, string? NationalId, string? AddressLine, string? Subdistrict, string? District, string? Province, string? PostalCode,
+        Guid? WorkPolicyId, string? WorkPolicyName);
 
     public sealed record InviteResponse(string Code, string Url, DateTimeOffset ExpiresAt);
 
@@ -34,13 +35,13 @@ public static class EmployeeEndpoints
         var employees = api.MapGroup("/employees").RequireAuthorization(Policies.Manager);
 
         employees.MapGet("/", async (JangnaDbContext db, CancellationToken ct) =>
-            await db.Employees.Include(e => e.Branch)
+            await db.Employees.Include(e => e.Branch).Include(e => e.WorkPolicy)
                 .OrderBy(e => e.FirstName)
                 .Select(e => ToDto(e))
                 .ToListAsync(ct));
 
         employees.MapGet("/{id:guid}", async (Guid id, JangnaDbContext db, CancellationToken ct) =>
-            await db.Employees.Include(e => e.Branch).SingleOrDefaultAsync(e => e.Id == id, ct) is { } e
+            await db.Employees.Include(e => e.Branch).Include(e => e.WorkPolicy).SingleOrDefaultAsync(e => e.Id == id, ct) is { } e
                 ? Results.Ok(ToDto(e))
                 : Results.NotFound());
 
@@ -53,6 +54,7 @@ public static class EmployeeEndpoints
             db.Employees.Add(employee);
             await db.SaveChangesAsync(ct);
             await db.Entry(employee).Reference(e => e.Branch).LoadAsync(ct);
+            await db.Entry(employee).Reference(e => e.WorkPolicy).LoadAsync(ct);
             return Results.Created($"/api/employees/{employee.Id}", ToDto(employee));
         });
 
@@ -60,18 +62,20 @@ public static class EmployeeEndpoints
         {
             if (await Validate(req, id, db, ct) is { } invalid) return invalid;
 
-            var employee = await db.Employees.Include(e => e.Branch).SingleOrDefaultAsync(e => e.Id == id, ct);
+            var employee = await db.Employees.Include(e => e.Branch).Include(e => e.WorkPolicy).SingleOrDefaultAsync(e => e.Id == id, ct);
             if (employee is null) return Results.NotFound();
             Apply(employee, req);
             await db.SaveChangesAsync(ct);
             await db.Entry(employee).Reference(e => e.Branch).LoadAsync(ct);
+            await db.Entry(employee).Reference(e => e.WorkPolicy).LoadAsync(ct);
             return Results.Ok(ToDto(employee));
         });
 
         employees.MapGet("/import/template", async (JangnaDbContext db, CancellationToken ct) =>
         {
             var branches = await db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => b.Name).ToListAsync(ct);
-            return Results.File(EmployeeImport.BuildTemplate(branches),
+            var policies = await db.WorkPolicies.AsNoTracking().Where(p => !p.Archived).OrderBy(p => p.Name).Select(p => p.Name).ToListAsync(ct);
+            return Results.File(EmployeeImport.BuildTemplate(branches, policies),
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "jangna-employees-template.xlsx");
         });
 
@@ -147,12 +151,27 @@ public static class EmployeeEndpoints
     {
         var errors = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(req.FirstName)) errors["firstName"] = [L.T("กรุณากรอกชื่อ", "First name is required")];
+        else if (req.FirstName.Trim().Length > 100) errors["firstName"] = [L.T("ชื่อยาวไม่เกิน 100 ตัวอักษร", "First name must be at most 100 characters")];
+        if (req.LastName is { } last && last.Trim().Length > 100) errors["lastName"] = [L.T("นามสกุลยาวไม่เกิน 100 ตัวอักษร", "Last name must be at most 100 characters")];
+        if (req.Nickname is { } nick && nick.Trim().Length > 50) errors["nickname"] = [L.T("ชื่อเล่นยาวไม่เกิน 50 ตัวอักษร", "Nickname must be at most 50 characters")];
+        if (req.AddressLine is { } line && line.Trim().Length > 300) errors["addressLine"] = [L.T("ที่อยู่ยาวไม่เกิน 300 ตัวอักษร", "Address must be at most 300 characters")];
+        foreach (var (key, value, label) in new[] { ("subdistrict", req.Subdistrict, ("ตำบล/แขวง", "Subdistrict")), ("district", req.District, ("อำเภอ/เขต", "District")), ("province", req.Province, ("จังหวัด", "Province")) })
+            if (value is { } v && v.Trim().Length > 50) errors[key] = [L.T($"{label.Item1}ยาวไม่เกิน 50 ตัวอักษร", $"{label.Item2} must be at most 50 characters")];
         if (req.BaseRate < 0) errors["baseRate"] = [L.T("ค่าจ้างติดลบไม่ได้", "Pay rate cannot be negative")];
+        else if (req.BaseRate > Limits.Money) errors["baseRate"] = [L.T("ค่าจ้างสูงเกินไป", "Pay rate is too large")];
         if (req.PayType != PayType.Piece && req.BaseRate == 0) errors["baseRate"] = [L.T("กรุณากรอกอัตราค่าจ้าง", "Enter a pay rate")];
         if (req.Language is not (null or "th" or "en" or "my")) errors["language"] = [L.T("รองรับ th, en, my", "Supported: th, en, my")];
         // filter ของ tenant ทำให้ branch ของร้านอื่นหาไม่เจอ
         if (req.BranchId is { } branchId && !await db.Branches.AnyAsync(b => b.Id == branchId, ct))
             errors["branchId"] = [L.T("ไม่พบสาขา", "Branch not found")];
+        if (req.WorkPolicyId is { } policyId)
+        {
+            var policy = await db.WorkPolicies.AsNoTracking().SingleOrDefaultAsync(p => p.Id == policyId, ct);
+            if (policy is null) errors["workPolicyId"] = [L.T("ไม่พบนโยบายการทำงาน", "Work policy not found")];
+            // เลือกนโยบายที่เลิกใช้แล้วได้เฉพาะถ้าพนักงานคนนี้ใช้อยู่แล้ว (บันทึกซ้ำไม่ให้ error)
+            else if (policy.Archived && !(id is { } employeeId && await db.Employees.AnyAsync(x => x.Id == employeeId && x.WorkPolicyId == policyId, ct)))
+                errors["workPolicyId"] = [L.T("นโยบายนี้เลิกใช้แล้ว", "This work policy is archived")];
+        }
         if (Clean(req.NationalId) is { } nationalId)
         {
             if (!IsValidNationalId(nationalId))
@@ -172,6 +191,7 @@ public static class EmployeeEndpoints
         e.Nickname = string.IsNullOrWhiteSpace(req.Nickname) ? null : req.Nickname.Trim();
         e.Phone = string.IsNullOrWhiteSpace(req.Phone) ? null : req.Phone.Trim();
         e.BranchId = req.BranchId;
+        e.WorkPolicyId = req.WorkPolicyId;
         e.PayType = req.PayType;
         e.BaseRate = req.BaseRate;
         e.WorkerType = req.WorkerType;
@@ -207,5 +227,6 @@ public static class EmployeeEndpoints
     private static EmployeeDto ToDto(Employee e) =>
         new(e.Id, e.FirstName, e.LastName, e.Nickname, e.Phone, e.BranchId, e.Branch?.Name,
             e.PayType, e.BaseRate, e.WorkerType, e.Status, e.Language, e.LineUserId is not null, e.LineLinkedAt,
-            e.Title, e.NationalId, e.AddressLine, e.Subdistrict, e.District, e.Province, e.PostalCode);
+            e.Title, e.NationalId, e.AddressLine, e.Subdistrict, e.District, e.Province, e.PostalCode,
+            e.WorkPolicyId, e.WorkPolicy?.Name);
 }

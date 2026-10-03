@@ -57,6 +57,8 @@ export interface Employee {
   district: string | null;
   province: string | null;
   postalCode: string | null;
+  workPolicyId: string | null;
+  workPolicyName: string | null;
 }
 
 export type Title = "Mr" | "Mrs" | "Miss";
@@ -308,4 +310,45 @@ export interface ImportReport {
   valid: number;
   imported: number;
   rows: ImportRowResult[];
+}
+
+export type DocumentType = "Passport" | "Visa" | "WorkPermit" | "PinkCard" | "Other";
+
+export const documentTypeLabels: Record<DocumentType, Bi> = {
+  Passport: ["พาสปอร์ต", "Passport"],
+  Visa: ["วีซ่า", "Visa"],
+  WorkPermit: ["ใบอนุญาตทำงาน", "Work permit"],
+  PinkCard: ["บัตรชมพู", "Pink card"],
+  Other: ["อื่นๆ", "Other"],
+};
+
+export interface EmployeeDocument {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  type: DocumentType;
+  number: string | null;
+  issuedOn: string | null;
+  expiresOn: string | null;
+  note: string | null;
+  /** เหลือกี่วัน — ติดลบ = หมดอายุแล้ว, null = ไม่มีวันหมดอายุ */
+  daysLeft: number | null;
+}
+
+/** หนึ่งวันในแพทเทิร์น: สัปดาห์ที่ weekIndex (0-based) วันที่ dayIndex (0 = จันทร์ … 6 = อาทิตย์) ทำกะ templateId */
+export interface WorkPolicyCell {
+  weekIndex: number;
+  dayIndex: number;
+  templateId: string;
+}
+
+export interface WorkPolicy {
+  id: string;
+  name: string;
+  description: string | null;
+  cycleWeeks: number;
+  anchorDate: string;
+  archived: boolean;
+  days: WorkPolicyCell[];
+  employeeCount: number;
 }

@@ -88,13 +88,13 @@ const iconBtn =
   "inline-flex size-[30px] items-center justify-center rounded-[10px] text-ink-2 transition hover:bg-muted hover:text-foreground active:scale-95";
 const smallGhost = "rounded-lg px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-muted hover:text-foreground";
 const smallAccent =
-  "rounded-[9px] bg-brand-action px-3 py-1.5 text-xs font-semibold text-brand-foreground shadow-brand transition hover:bg-brand-action-hover disabled:opacity-50";
+  "rounded-[9px] bg-brand-action px-3 py-1.5 text-xs font-semibold text-brand-foreground transition hover:bg-brand-action-hover disabled:opacity-50";
 
 function Weekdays({ lang }: { lang: Lang }) {
   return (
     <div className="grid grid-cols-7 px-0.5 pb-1">
       {NAMES[lang].weekdays.map((w, i) => (
-        <div key={i} className={cn("py-1.5 text-center text-[11px] font-medium text-muted-foreground", i === 0 && "text-brand-strong/80")}>
+        <div key={i} className={cn("py-1.5 text-center text-xs font-medium text-muted-foreground", i === 0 && "text-brand-strong/80")}>
           {w}
         </div>
       ))}
@@ -140,7 +140,7 @@ export function Calendar({ value, onSelect, min, max, marked, footer = true, siz
   return (
     <div
       className={cn(
-        "rounded-[18px] border bg-surface text-foreground shadow-pop",
+        "rounded-3xl border bg-surface text-foreground shadow-pop",
         mini ? "w-[260px] p-3" : "w-[320px] max-w-[calc(100vw-2rem)] p-4",
         className,
       )}
@@ -185,11 +185,11 @@ export function Calendar({ value, onSelect, min, max, marked, footer = true, siz
                   onClick={() => onSelect?.(iso)}
                   className={cn(
                     "relative flex aspect-square items-center justify-center border border-transparent tabular transition",
-                    mini ? "rounded-lg text-xs" : "rounded-[10px] text-[13px]",
+                    mini ? "rounded-lg text-xs" : "rounded-[10px] text-sm",
                     "hover:bg-muted",
                     !inMonth && "text-muted-foreground/55",
                     iso === today && !selected && "border-brand font-semibold text-brand-strong",
-                    selected && "border-primary bg-primary font-semibold text-primary-foreground shadow-ink hover:bg-primary/90",
+                    selected && "border-primary bg-primary font-semibold text-primary-foreground hover:bg-primary/90",
                     disabled && "cursor-not-allowed text-muted-foreground/35 hover:bg-transparent",
                   )}
                 >
@@ -220,7 +220,7 @@ export function Calendar({ value, onSelect, min, max, marked, footer = true, siz
                 setMode("days");
               }}
               className={cn(
-                "rounded-[10px] border border-transparent py-3 text-[13px] text-ink-2 transition hover:bg-muted hover:text-foreground",
+                "rounded-[10px] border border-transparent py-3 text-sm text-ink-2 transition hover:bg-muted hover:text-foreground",
                 i === tp.m && view.y === tp.y && "border-brand font-semibold text-brand-strong",
                 i === view.m && "bg-primary font-semibold text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
               )}
@@ -242,7 +242,7 @@ export function Calendar({ value, onSelect, min, max, marked, footer = true, siz
                 setMode("months");
               }}
               className={cn(
-                "rounded-[10px] border border-transparent py-3 text-[13px] text-ink-2 tabular transition hover:bg-muted hover:text-foreground",
+                "rounded-[10px] border border-transparent py-3 text-sm text-ink-2 tabular transition hover:bg-muted hover:text-foreground",
                 y === tp.y && "border-brand font-semibold text-brand-strong",
                 y === view.y && "bg-primary font-semibold text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
               )}
@@ -305,7 +305,7 @@ function usePopover() {
 
 const fieldButton = (open: boolean) =>
   cn(
-    "flex h-9 w-full items-center gap-2.5 rounded-xl border bg-surface px-3 text-left text-sm transition-[border-color,box-shadow,background] duration-200 hover:bg-[#fbf4e5] dark:hover:bg-muted",
+    "flex h-9 w-full items-center gap-2.5 rounded-xl border bg-surface px-3 text-left text-sm transition-[border-color,box-shadow,background] duration-200 hover:bg-muted",
     open && "border-brand ring-4 ring-brand/12",
   );
 
@@ -464,9 +464,9 @@ export function DateRangeField({
                 onMouseEnter={() => setHover(iso)}
                 onMouseLeave={() => setHover(null)}
                 className={cn(
-                  "flex aspect-square items-center justify-center rounded-[10px] border border-transparent text-[13px] tabular transition hover:bg-muted",
+                  "flex aspect-square items-center justify-center rounded-[10px] border border-transparent text-sm tabular transition hover:bg-muted",
                   iso === today && !isStart && !isEnd && "border-brand font-semibold text-brand-strong",
-                  inRange && "rounded-none bg-brand-soft hover:bg-[#efcdbc] dark:hover:bg-brand-soft",
+                  inRange && "rounded-none bg-brand-soft hover:bg-brand-soft",
                   (isStart || isEnd) && "bg-brand-action font-semibold text-brand-foreground hover:bg-brand-action-hover",
                   isStart && end && !isEnd && "rounded-r-none",
                   isEnd && start && !isStart && "rounded-l-none",
@@ -495,11 +495,11 @@ export function DateRangeField({
       </button>
 
       {open && (
-        <div className="absolute top-full left-0 z-30 mt-2 w-[min(680px,calc(100vw-2rem))] origin-top-left animate-pop-in rounded-[18px] border bg-surface p-4 shadow-pop">
+        <div className="absolute top-full left-0 z-30 mt-2 w-[min(680px,calc(100vw-2rem))] origin-top-left animate-pop-in rounded-3xl border bg-surface p-4 shadow-pop">
           <div className="flex flex-col md:flex-row">
             {presets.length > 0 && (
               <div className="mb-3 flex flex-wrap gap-0.5 border-b border-dashed pb-2 md:mr-3.5 md:mb-0 md:w-36 md:shrink-0 md:flex-col md:flex-nowrap md:border-r md:border-b-0 md:pr-2 md:pb-0">
-                <div className="hidden px-2.5 pb-1.5 text-[11px] font-semibold tracking-[0.08em] text-muted-foreground uppercase md:block">
+                <div className="hidden px-2.5 pb-1.5 text-xs font-semibold tracking-[0.08em] text-muted-foreground uppercase md:block">
                   {t("ลัด", "Quick")}
                 </div>
                 {presets.map((p) => {
@@ -515,7 +515,7 @@ export function DateRangeField({
                         setView({ y: s.y, m: s.m });
                       }}
                       className={cn(
-                        "rounded-[9px] px-2.5 py-1.5 text-left text-[13px] text-ink-2 transition hover:bg-muted hover:text-foreground",
+                        "rounded-[9px] px-2.5 py-1.5 text-left text-sm text-ink-2 transition hover:bg-muted hover:text-foreground",
                         active && "bg-primary font-medium text-primary-foreground hover:bg-primary hover:text-primary-foreground",
                       )}
                     >

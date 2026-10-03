@@ -38,6 +38,8 @@ jangna/
 |---|---|---|
 | `/auth/register`, `/auth/login` | AuthEndpoints | anonymous |
 | `/me`, `/branches` | OrgEndpoints | login (แก้สาขา = Owner) |
+| `/work-policies` (CRUD + `/assign`), `/shifts/generate` | WorkPolicyEndpoints | Manager+ |
+| `/employee-documents`, `/employee-documents/expiring` | DocumentEndpoints | Manager+ |
 | `/employees`, `/employees/{id}/invites`, `/employees/import/template` (GET .xlsx), `/employees/import?dryRun=` (POST multipart) | EmployeeEndpoints + `Imports/EmployeeImport` (ClosedXML) | Manager+ |
 | `/liff/invites/{code}`, `/liff/join` | LiffEndpoints | anonymous (ยืนยันด้วย LINE ID token) |
 | `/legal/rules`, `/legal/minimum-wage` | LegalEndpoints | login |

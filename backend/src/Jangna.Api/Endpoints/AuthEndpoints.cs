@@ -27,8 +27,8 @@ public static class AuthEndpoints
             var errors = new Dictionary<string, string[]>();
             if (string.IsNullOrWhiteSpace(req.ShopName)) errors["shopName"] = [L.T("กรุณากรอกชื่อร้าน", "Shop name is required")];
             if (string.IsNullOrWhiteSpace(req.DisplayName)) errors["displayName"] = [L.T("กรุณากรอกชื่อ", "Your name is required")];
-            if (!req.Email.Contains('@')) errors["email"] = [L.T("อีเมลไม่ถูกต้อง", "Invalid email")];
-            if (req.Password.Length < 8) errors["password"] = [L.T("รหัสผ่านอย่างน้อย 8 ตัวอักษร", "Password must be at least 8 characters")];
+            if (req.Email is null || !req.Email.Contains('@')) errors["email"] = [L.T("อีเมลไม่ถูกต้อง", "Invalid email")];
+            if ((req.Password?.Length ?? 0) < 8) errors["password"] = [L.T("รหัสผ่านอย่างน้อย 8 ตัวอักษร", "Password must be at least 8 characters")];
             if (errors.Count > 0) return Results.ValidationProblem(errors);
 
             var email = NormalizeEmail(req.Email);
@@ -51,6 +51,9 @@ public static class AuthEndpoints
         auth.MapPost("/login", async (LoginRequest req, JangnaDbContext db, TokenService tokens,
             IPasswordHasher<User> hasher, CancellationToken ct) =>
         {
+            if (string.IsNullOrWhiteSpace(req.Email) || string.IsNullOrEmpty(req.Password))
+                return Results.Problem(L.T("อีเมลหรือรหัสผ่านไม่ถูกต้อง", "Incorrect email or password"), statusCode: StatusCodes.Status401Unauthorized);
+
             var email = NormalizeEmail(req.Email);
             var user = await db.Users.SingleOrDefaultAsync(u => u.Email == email, ct);
             if (user is null || hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password) == PasswordVerificationResult.Failed)

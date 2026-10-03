@@ -249,11 +249,11 @@ function Select({
           }
         }}
         className={cn(
-          "flex w-full min-w-0 items-center gap-2 border border-input bg-surface text-left text-sm transition-[border-color,box-shadow,background] duration-200",
-          "hover:bg-[#fbf4e5] dark:hover:bg-muted focus-visible:border-brand focus-visible:ring-4 focus-visible:ring-brand/12 focus-visible:outline-none",
+          "flex w-full min-w-0 items-center gap-2 border-2 border-input bg-background text-left text-sm transition-[border-color,box-shadow,background] duration-200",
+          "focus-visible:border-brand focus-visible:bg-surface focus-visible:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
-          sm ? "h-8 rounded-[10px] px-2.5" : "h-9 rounded-xl px-3",
-          open && "border-brand ring-4 ring-brand/12"
+          sm ? "h-9 rounded-xl px-3" : "h-11 rounded-2xl px-4",
+          open && "border-brand bg-surface"
         )}
       >
         <span className={cn("flex-1 truncate", !selected && "text-muted-foreground")}>{selected ? selected.label : placeholder}</span>
@@ -279,7 +279,7 @@ function Select({
           <div
             ref={panelRef}
             className={cn(
-              "fixed z-50 flex flex-col rounded-[18px] border bg-surface p-1.5 text-foreground shadow-pop animate-pop-in",
+              "fixed z-50 flex flex-col rounded-2xl border bg-surface p-1.5 text-foreground shadow-pop animate-pop-in",
               pos.above ? "origin-bottom" : "origin-top"
             )}
             style={{ top: pos.top, bottom: pos.bottom, left: pos.left, width: pos.width, maxHeight: pos.maxHeight }}
@@ -296,7 +296,7 @@ function Select({
                   }}
                   onKeyDown={onListKey}
                   placeholder={searchPlaceholder ?? t("ค้นหา…", "Search…")}
-                  className="h-8 w-full rounded-[10px] border bg-[#fbf4e5] pr-2.5 pl-8 text-[13px] outline-none focus:border-brand focus:bg-surface dark:bg-muted"
+                  className="h-8 w-full rounded-[10px] border bg-background pr-2.5 pl-8 text-sm outline-none focus:border-brand focus:bg-surface"
                 />
               </div>
             )}
@@ -309,7 +309,7 @@ function Select({
               aria-activedescendant={active >= 0 ? `${listId}-${active}` : undefined}
               className="min-h-0 flex-1 overflow-y-auto overscroll-contain outline-none"
             >
-              {filtered.length === 0 && <li className="px-2.5 py-6 text-center text-[13px] text-muted-foreground">{emptyText ?? t("ไม่พบรายการ", "No matches")}</li>}
+              {filtered.length === 0 && <li className="px-2.5 py-6 text-center text-sm text-muted-foreground">{emptyText ?? t("ไม่พบรายการ", "No matches")}</li>}
               {filtered.map((o, i) => {
                 const isSelected = o.value === current
                 return (
@@ -324,10 +324,10 @@ function Select({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => choose(o)}
                     className={cn(
-                      "flex cursor-pointer items-center gap-2 rounded-[10px] px-2.5 text-[13px] text-ink-2 transition-colors",
+                      "flex cursor-pointer items-center gap-2 rounded-[10px] px-2.5 text-sm text-ink-2 transition-colors",
                       sm ? "py-1.5" : "py-2",
                       i === active && !isSelected && "bg-muted text-foreground",
-                      isSelected && "bg-primary font-semibold text-primary-foreground shadow-ink",
+                      isSelected && "bg-sage-soft font-semibold text-sage-ink",
                       o.disabled && "cursor-not-allowed opacity-40"
                     )}
                   >

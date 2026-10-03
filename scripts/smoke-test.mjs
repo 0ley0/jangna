@@ -112,4 +112,55 @@ eq(week.length, 2, "กะสัปดาห์ถัดไป");
 eq(week[0].hours, 8, "ชั่วโมงกะเช้า (9 ชม. − พัก 1)");
 ok("กะงาน: แม่แบบ + จัดกะ + คัดลอกสัปดาห์");
 
+// ---------- เอกสารพนักงาน (แรงงานต่างด้าว) ----------
+
+const bangkokNow = Date.now() + 7 * 3600 * 1000;
+const inDays = (n) => new Date(bangkokNow + n * 86400000).toISOString().slice(0, 10);
+await call("POST", "/api/employee-documents", { employeeId: packer.id, type: "Passport", number: "AA123", expiresOn: inDays(-2) }, t);
+await call("POST", "/api/employee-documents", { employeeId: packer.id, type: "WorkPermit", expiresOn: inDays(20) }, t);
+await call("POST", "/api/employee-documents", { employeeId: packer.id, type: "Visa", expiresOn: inDays(300) }, t);
+const soon = await call("GET", "/api/employee-documents/expiring", undefined, t);
+eq(soon.length, 2, "เอกสารหมดแล้ว + ใกล้หมด (ไม่รวมที่ยังอีกไกล)");
+eq(soon[0].daysLeft, -2, "เรียงตามเร่งด่วน");
+ok("เอกสารพนักงาน + แจ้งเตือนวันหมดอายุ (enum/วันที่ใน Postgres)");
+
+// ---------- นโยบายการทำงาน (Work Policy) ----------
+
+const evening = await call("POST", "/api/shift-templates", { name: "กะบ่าย", startTime: "14:00:00", endTime: "23:00:00", breakMinutes: 60, color: "amber" }, t);
+const week2 = iso(Y, 10, 19); // จันทร์ ไม่ซ้ำกับสัปดาห์ที่จัดกะไว้ด้านบน
+const rotation = await call("POST", "/api/work-policies", {
+  name: "หมุนเวียนเช้า/บ่าย", cycleWeeks: 2, anchorDate: iso(Y, 10, 5),
+  days: [0, 1, 2, 3, 4].flatMap((d) => [{ weekIndex: 0, dayIndex: d, templateId: morning.id }, { weekIndex: 1, dayIndex: d, templateId: evening.id }]),
+}, t);
+eq(rotation.days.length, 10, "แพทเทิร์น 2 สัปดาห์ x 5 วัน");
+await call("POST", "/api/work-policies/assign", { policyId: rotation.id, employeeIds: [packer.id] }, t);
+const generated = await call("POST", "/api/shifts/generate", { from: week2, to: iso(Y, 10, 25) }, t);
+eq(generated.created, 5, "สร้างกะสัปดาห์ที่ 3 ของรอบ (= สัปดาห์ที่ 1 → เช้า) 5 วัน");
+eq(generated.employeesWithoutPolicy, 1, "แอดมินยังไม่มีนโยบาย");
+const planned = await call("GET", `/api/shifts?from=${week2}&to=${iso(Y, 10, 25)}`, undefined, t);
+if (planned[0].startTime !== "08:00:00") throw new Error(`สัปดาห์ที่ 1 ของรอบต้องเป็นกะเช้า ได้ ${planned[0].startTime}`);
+eq((await call("POST", "/api/shifts/generate", { from: week2, to: iso(Y, 10, 25) }, t)).created, 0, "สร้างซ้ำไม่เพิ่ม (unique index)");
+// แก้แพทเทิร์นแบบแก้แถวเดิม/ลบ/เพิ่ม ไม่ชน unique (policy, week, day)
+const edited = await call("PUT", `/api/work-policies/${rotation.id}`, {
+  name: "หมุนเวียนเช้า/บ่าย", cycleWeeks: 1, anchorDate: iso(Y, 10, 5),
+  days: [{ weekIndex: 0, dayIndex: 0, templateId: evening.id }, { weekIndex: 0, dayIndex: 5, templateId: morning.id }],
+}, t);
+eq(edited.days.length, 2, "แก้แพทเทิร์นเหลือ 2 วัน");
+ok("นโยบายการทำงาน: สร้าง/กำหนด/สร้างกะ/แก้แพทเทิร์น (unique index ใน Postgres)");
+
+// ---------- ค่าใหญ่เกินคอลัมน์ต้องได้ 400 (InMemory ไม่เห็น — Postgres จะ 500 ถ้า validation หลุด) ----------
+
+const huge = 99_999_999_999_999;
+const shopNow = await call("GET", "/api/shop", undefined, t);
+await expectStatus(400, call("POST", "/api/advances", { employeeId: packer.id, date: oct(1), amount: huge }, t), "เงินเบิกใหญ่เกิน numeric(12,2)");
+await expectStatus(400, call("POST", "/api/piece-work", { employeeId: packer.id, date: oct(1), description: "x", quantity: huge, rate: 5, overtime: false }, t), "จำนวนชิ้นใหญ่เกิน");
+await expectStatus(400, call("PUT", "/api/shop", { ...shopNow, address: "ก".repeat(501) }, t), "ที่อยู่ร้านยาวเกิน varchar(500)");
+await expectStatus(400, call("PUT", "/api/shop", { ...shopNow, rdUserId: "x".repeat(21) }, t), "RD user ยาวเกิน varchar(20)");
+await expectStatus(400, call("POST", "/api/branches", { name: "lat เกิน", provinceCode: "TH-10", geoLat: 91, geoLng: 100 }, t), "ละติจูดเกิน 90");
+await expectStatus(400, call("POST", "/api/employees", { firstName: "ก", payType: "Daily", baseRate: huge, workerType: "Employee" }, t), "ค่าจ้างใหญ่เกิน numeric(12,2)");
+await expectStatus(400, call("POST", "/api/employees", { firstName: "ก", payType: "Daily", baseRate: 400, workerType: "Employee", province: "ก".repeat(51) }, t), "จังหวัดยาวเกิน varchar(50)");
+await expectStatus(400, call("PUT", "/api/opening-balances", { employeeId: packer.id, year: 1, taxableIncome: 1, taxWithheld: 0, socialSecurity: 0 }, t), "ปียอดยกมาไม่สมเหตุสมผล");
+await expectStatus(400, call("POST", "/api/auth/register", {}, undefined), "สมัครโดยไม่ส่ง field");
+ok("ค่าใหญ่เกิน/ยาวเกิน/JSON ไม่ครบ → 400 ไม่ใช่ 500 (กฎ validation ตรงกับขนาดคอลัมน์ใน Postgres)");
+
 console.log(`\nผ่านทั้งหมด ${step} ขั้น (${email})`);

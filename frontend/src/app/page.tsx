@@ -59,7 +59,7 @@ export default function Home() {
       </div>
       <ul className="grid gap-4 sm:grid-cols-3">
         {features.map((f) => (
-          <li key={f.title} className="rounded-[18px] border bg-card p-5 shadow-card">
+          <li key={f.title} className="rounded-[28px] border bg-card p-5 shadow-card">
             <span className="mb-3 flex size-10 items-center justify-center rounded-2xl bg-brand-soft text-brand-ink">
               <f.icon size={18} />
             </span>

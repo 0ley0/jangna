@@ -21,6 +21,8 @@
 ## EF Core
 - **id สร้างฝั่งแอป (Guid v7) + เพิ่มผ่าน navigation อย่างเดียว → EF คิดว่าแถวมีอยู่แล้ว แล้ว UPDATE** (DbUpdateConcurrencyException)
   → ต้อง `db.X.Add(entity)` ตรงๆ; และ **อย่า `Add` ซ้ำเข้า navigation** — relationship fixup ใส่ให้เองจาก FK (จะได้รายการซ้ำ)
+  - อาการอีกแบบ: guard tenant โยน `ห้ามเขียน X ข้าม tenant (state Modified, tenant ของข้อมูล 0000…)` = แถวใหม่ที่ถูกมองเป็น Modified จึงไม่ถูก stamp TenantId (เจอตอน PUT แก้ลูกของนโยบายการทำงานที่ track อยู่; **InMemory ผ่านแต่ Postgres พัง** → ต้องมีขั้นใน smoke-test)
+  - แก้ลูกของ parent ที่ track อยู่ (PUT แทนที่ชุดลูก): แก้แถวเดิม / `Remove` ที่หาย / `db.Child.Add` ที่ใหม่ — ไม่ลบทั้งชุดแล้วเพิ่มใหม่ (unique index ชน) ดู `WorkPolicyEndpoints.Apply`
 - **decimal scale**: ค่าจาก `numeric(14,2)` ได้ `900.00` แต่ค่าที่คำนวณได้ `900` → เทียบด้วย `ToString()` ไม่เท่ากัน
   → format `"F2"` (InvariantCulture) ก่อนเทียบ (เคยทำให้ lock รอบจ่ายไม่ได้เลยบน Postgres)
 - **InMemory provider ไม่รองรับ `SelectMany` บาง pattern** (NotImplementedException) และ `ExecuteUpdate` → เขียน query แบบ 2 ขั้น (ids ก่อนแล้ว `Contains`)

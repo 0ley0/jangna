@@ -72,6 +72,11 @@ export default function ShiftsPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftsKey }),
   });
 
+  const generate = useMutation<{ created: number; skippedExisting: number; employeesWithoutPolicy: number }, ApiError>({
+    mutationFn: () => api("/api/shifts/generate", { method: "POST", json: { from: monday, to: sunday } }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: shiftsKey }),
+  });
+
   const active = employees.data?.filter((e) => e.status === "Active") ?? [];
   const byCell = new Map(shifts.data?.map((s) => [`${s.employeeId}|${s.date}`, s]));
   const templateById = new Map(templates.data?.map((x) => [x.id, x]));
@@ -117,13 +122,24 @@ export default function ShiftsPage() {
             <Button variant="outline" size="sm" onClick={() => copyLastWeek.mutate()} loading={copyLastWeek.isPending}>
               <Icon.Copy size={14} /> {t("คัดลอกจากสัปดาห์ก่อน", "Copy last week")}
             </Button>
+            <Button variant="outline" size="sm" onClick={() => generate.mutate()} loading={generate.isPending}>
+              <Icon.Sparkle size={14} /> {t("สร้างจากนโยบายงาน", "Fill from work policies")}
+            </Button>
             <Button size="sm" disabled title={t("ต้องเปิด LINE OA ก่อน", "Needs the LINE OA first")}>
               <Icon.Line size={14} /> {t("ส่งเข้า LINE (เร็วๆ นี้)", "Send to LINE (soon)")}
             </Button>
           </div>
         </CardHeader>
         <CardContent className="grid gap-3">
-          <FormError message={save.error?.message ?? copyLastWeek.error?.message} />
+          <FormError message={save.error?.message ?? copyLastWeek.error?.message ?? generate.error?.message} />
+          {generate.data && (
+            <p className="text-sm text-muted-foreground">
+              {t(
+                `สร้างจากนโยบาย ${generate.data.created} กะ (ข้ามช่องที่มีกะอยู่แล้ว ${generate.data.skippedExisting}${generate.data.employeesWithoutPolicy > 0 ? `, พนักงาน ${generate.data.employeesWithoutPolicy} คนยังไม่มีนโยบาย` : ""})`,
+                `Created ${generate.data.created} shifts (${generate.data.skippedExisting} existing kept${generate.data.employeesWithoutPolicy > 0 ? `, ${generate.data.employeesWithoutPolicy} staff have no policy` : ""})`,
+              )}
+            </p>
+          )}
           {copyLastWeek.data && (
             <p className="text-sm text-muted-foreground">
               {t(`คัดลอกแล้ว ${copyLastWeek.data.copied} กะ (ช่องที่มีกะอยู่แล้วไม่ถูกทับ)`, `Copied ${copyLastWeek.data.copied} shifts (existing cells kept)`)}

@@ -3,6 +3,7 @@ using System;
 using Jangna.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Jangna.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(JangnaDbContext))]
-    partial class JangnaDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261003082528_AddEmployeeDocuments")]
+    partial class AddEmployeeDocuments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -265,10 +268,6 @@ namespace Jangna.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("title");
 
-                    b.Property<Guid?>("WorkPolicyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("work_policy_id");
-
                     b.Property<string>("WorkerType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -280,9 +279,6 @@ namespace Jangna.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BranchId")
                         .HasDatabaseName("ix_employees_branch_id");
-
-                    b.HasIndex("WorkPolicyId")
-                        .HasDatabaseName("ix_employees_work_policy_id");
 
                     b.HasIndex("TenantId", "LineUserId")
                         .IsUnique()
@@ -1119,101 +1115,6 @@ namespace Jangna.Infrastructure.Persistence.Migrations
                     b.ToTable("work_days", (string)null);
                 });
 
-            modelBuilder.Entity("Jangna.Core.Entities.WorkPolicy", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateOnly>("AnchorDate")
-                        .HasColumnType("date")
-                        .HasColumnName("anchor_date");
-
-                    b.Property<bool>("Archived")
-                        .HasColumnType("boolean")
-                        .HasColumnName("archived");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("CycleWeeks")
-                        .HasColumnType("integer")
-                        .HasColumnName("cycle_weeks");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(300)
-                        .HasColumnType("character varying(300)")
-                        .HasColumnName("description");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(60)
-                        .HasColumnType("character varying(60)")
-                        .HasColumnName("name");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_work_policies");
-
-                    b.HasIndex("TenantId", "Name")
-                        .IsUnique()
-                        .HasDatabaseName("ix_work_policies_tenant_id_name");
-
-                    b.ToTable("work_policies", (string)null);
-                });
-
-            modelBuilder.Entity("Jangna.Core.Entities.WorkPolicyDay", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at");
-
-                    b.Property<int>("DayIndex")
-                        .HasColumnType("integer")
-                        .HasColumnName("day_index");
-
-                    b.Property<Guid>("ShiftTemplateId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("shift_template_id");
-
-                    b.Property<Guid>("TenantId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("tenant_id");
-
-                    b.Property<int>("WeekIndex")
-                        .HasColumnType("integer")
-                        .HasColumnName("week_index");
-
-                    b.Property<Guid>("WorkPolicyId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("work_policy_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_work_policy_days");
-
-                    b.HasIndex("ShiftTemplateId")
-                        .HasDatabaseName("ix_work_policy_days_shift_template_id");
-
-                    b.HasIndex("WorkPolicyId")
-                        .HasDatabaseName("ix_work_policy_days_work_policy_id");
-
-                    b.HasIndex("TenantId", "WorkPolicyId", "WeekIndex", "DayIndex")
-                        .IsUnique()
-                        .HasDatabaseName("ix_work_policy_days_tenant_id_work_policy_id_week_index_day_in");
-
-                    b.ToTable("work_policy_days", (string)null);
-                });
-
             modelBuilder.Entity("Jangna.Core.Entities.Advance", b =>
                 {
                     b.HasOne("Jangna.Core.Entities.Employee", "Employee")
@@ -1233,15 +1134,7 @@ namespace Jangna.Infrastructure.Persistence.Migrations
                         .HasForeignKey("BranchId")
                         .HasConstraintName("fk_employees_branches_branch_id");
 
-                    b.HasOne("Jangna.Core.Entities.WorkPolicy", "WorkPolicy")
-                        .WithMany()
-                        .HasForeignKey("WorkPolicyId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_employees_work_policies_work_policy_id");
-
                     b.Navigation("Branch");
-
-                    b.Navigation("WorkPolicy");
                 });
 
             modelBuilder.Entity("Jangna.Core.Entities.EmployeeDocument", b =>
@@ -1334,33 +1227,9 @@ namespace Jangna.Infrastructure.Persistence.Migrations
                     b.Navigation("Employee");
                 });
 
-            modelBuilder.Entity("Jangna.Core.Entities.WorkPolicyDay", b =>
-                {
-                    b.HasOne("Jangna.Core.Entities.ShiftTemplate", "ShiftTemplate")
-                        .WithMany()
-                        .HasForeignKey("ShiftTemplateId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired()
-                        .HasConstraintName("fk_work_policy_days_shift_templates_shift_template_id");
-
-                    b.HasOne("Jangna.Core.Entities.WorkPolicy", null)
-                        .WithMany("Days")
-                        .HasForeignKey("WorkPolicyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_work_policy_days_work_policies_work_policy_id");
-
-                    b.Navigation("ShiftTemplate");
-                });
-
             modelBuilder.Entity("Jangna.Core.Entities.PayRun", b =>
                 {
                     b.Navigation("Items");
-                });
-
-            modelBuilder.Entity("Jangna.Core.Entities.WorkPolicy", b =>
-                {
-                    b.Navigation("Days");
                 });
 #pragma warning restore 612, 618
         }

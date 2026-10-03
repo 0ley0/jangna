@@ -30,12 +30,15 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
     public DbSet<WorkDay> WorkDays => Set<WorkDay>();
     public DbSet<PieceWorkEntry> PieceWorkEntries => Set<PieceWorkEntry>();
     public DbSet<Advance> Advances => Set<Advance>();
+    public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<Holiday> Holidays => Set<Holiday>();
     public DbSet<PayRun> PayRuns => Set<PayRun>();
     public DbSet<PayRunItem> PayRunItems => Set<PayRunItem>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<OpeningBalance> OpeningBalances => Set<OpeningBalance>();
     public DbSet<ShiftTemplate> ShiftTemplates => Set<ShiftTemplate>();
+    public DbSet<WorkPolicy> WorkPolicies => Set<WorkPolicy>();
+    public DbSet<WorkPolicyDay> WorkPolicyDays => Set<WorkPolicyDay>();
     public DbSet<Shift> Shifts => Set<Shift>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -84,6 +87,7 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
             e.Property(x => x.Province).HasMaxLength(50);
             e.Property(x => x.PostalCode).HasMaxLength(5);
             e.HasIndex(x => new { x.TenantId, x.LineUserId }).IsUnique().HasFilter("line_user_id IS NOT NULL");
+            e.HasOne(x => x.WorkPolicy).WithMany().HasForeignKey(x => x.WorkPolicyId).OnDelete(DeleteBehavior.SetNull);
         });
 
         b.Entity<EmployeeInvite>(e =>
@@ -122,6 +126,14 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
             e.Property(x => x.Amount).HasPrecision(12, 2);
         });
 
+        b.Entity<EmployeeDocument>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.EmployeeId });
+            e.HasIndex(x => new { x.TenantId, x.ExpiresOn });
+            e.Property(x => x.Type).HasConversion<string>().HasMaxLength(20);
+            e.Property(x => x.Number).HasMaxLength(50);
+        });
+
         b.Entity<Holiday>(e => e.HasIndex(x => new { x.TenantId, x.Date }).IsUnique());
 
         b.Entity<PayRun>(e =>
@@ -150,6 +162,20 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
             e.Property(x => x.TaxableIncome).HasPrecision(14, 2);
             e.Property(x => x.TaxWithheld).HasPrecision(14, 2);
             e.Property(x => x.SocialSecurity).HasPrecision(14, 2);
+        });
+
+        b.Entity<WorkPolicy>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.Name }).IsUnique();
+            e.Property(x => x.Name).HasMaxLength(60);
+            e.Property(x => x.Description).HasMaxLength(300);
+            e.HasMany(x => x.Days).WithOne().HasForeignKey(d => d.WorkPolicyId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<WorkPolicyDay>(e =>
+        {
+            e.HasIndex(x => new { x.TenantId, x.WorkPolicyId, x.WeekIndex, x.DayIndex }).IsUnique();
+            e.HasOne(x => x.ShiftTemplate).WithMany().HasForeignKey(x => x.ShiftTemplateId).OnDelete(DeleteBehavior.Restrict);
         });
 
         b.Entity<ShiftTemplate>(e =>
@@ -263,7 +289,7 @@ public sealed class JangnaDbContext(DbContextOptions<JangnaDbContext> options, I
                 && CurrentTenantId is { } current
                 && entry.Entity.TenantId != current)
             {
-                throw new InvalidOperationException($"ห้ามเขียน {entry.Entity.GetType().Name} ข้าม tenant");
+                throw new InvalidOperationException($"ห้ามเขียน {entry.Entity.GetType().Name} ข้าม tenant (state {entry.State}, tenant ของข้อมูล {entry.Entity.TenantId}, tenant ปัจจุบัน {current})");
             }
         }
     }

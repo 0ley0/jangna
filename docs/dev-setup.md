@@ -27,7 +27,10 @@ Frontend env: `NEXT_PUBLIC_API_URL` (default `http://localhost:5099`), `NEXT_PUB
 cd backend && dotnet test                  # engine + tenant + API flow (InMemory)
 cd frontend && npm run lint && npx tsc --noEmit && npm run build
 node scripts/smoke-test.mjs                # ยิง API จริงกับ Postgres (ต้องรัน API อยู่)
+cd frontend && npm run e2e                 # Playwright กับ Chrome ในเครื่อง (ต้องรัน API :5099 + เว็บ :3000 อยู่)
 ```
+**E2E (`frontend/e2e/`)**: ทุกเทสต์สมัครร้านใหม่เอง (อีเมลสุ่ม ไม่แตะบัญชีตัวอย่าง) เตรียมข้อมูลผ่าน API แล้วทดสอบหน้าจริง — ใช้ `openAs()` (ใส่ token + รอ hydrate) ไม่ใช่ `page.goto` ตรงๆ ไม่งั้นคลิกแรกอาจหาย · ตอนมี dialog เปิดอยู่ หน้าหลังถูก `aria-hidden` → `getByRole` มองไม่เห็น ใช้ `locator(...)` แทน · `--headed` ดูหน้าจอ, `npx playwright show-report` ดูรายงาน
+**บั๊กที่เทสต์กลุ่ม `CrudBoundaryTests` + smoke ขั้นสุดท้ายป้องกัน**: ข้อมูลใหญ่/ยาวเกินคอลัมน์ต้องได้ 400 ไม่ใช่ 500 (กฎอยู่ที่ `Limits.cs` + validation ของแต่ละ endpoint), enum รับเฉพาะชื่อ (ไม่รับตัวเลข), JSON ที่ไม่ครบ field ต้องไม่ NullReferenceException
 InMemory **ไม่** ตรวจ unique index, decimal scale, SQL จริง → ฟีเจอร์ที่แตะ DB ให้รัน smoke test กับ Postgres ด้วยเสมอ (ดู [gotchas.md](gotchas.md))
 
 ## Migration

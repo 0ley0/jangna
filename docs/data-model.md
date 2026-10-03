@@ -11,6 +11,7 @@
 | `memberships` | user ↔ tenant + role (Owner/Manager/Staff) | user 1 คนอยู่ได้หลายร้าน |
 | `branches` | สาขา: `province_code` (ISO 3166-2:TH), `area_code` (รหัสอำเภอ 4 หลัก), geo + รัศมี | ใช้หาค่าแรงขั้นต่ำ |
 | `employees` | pay_type (Monthly/Daily/Hourly/Piece), base_rate, worker_type (Employee/Freelance), language (th/en/my), line_user_id, title (Mr/Mrs/Miss), national_id, address_line/subdistrict/district/province/postal_code | unique (tenant, line_user_id); national_id ซ้ำในร้านไม่ได้ (ตรวจในแอป) |
+| `employee_documents` | เอกสารพนักงาน: type (Passport/Visa/WorkPermit/PinkCard/Other), number, issued_on, expires_on (null = ไม่แจ้งเตือน), note | index (tenant, employee), (tenant, expires_on) · ยังไม่เก็บไฟล์สแกน (รอ R2) |
 | `employee_invites` | code 8 ตัว ใช้ครั้งเดียว หมดอายุ 7 วัน | สร้างใหม่ = ยกเลิกอันเก่า |
 | `legal_rule_sets` | กฎหมายแบบ effective-dated, `payload` jsonb (`LegalRules`) | **ข้อมูลระบบ** ไม่ผูก tenant, seeder sync จากโค้ด |
 | `minimum_wages` | province + area (nullable) + rate + effective_from + `verified` | ข้อมูลระบบ, seed จาก JSON draft |
@@ -22,6 +23,8 @@
 | `pay_runs` | period, pay_date, status (Draft/Locked), `rules_snapshot` jsonb, locked_at/by | ห้ามทับช่วง, ต้องอยู่ในเดือนเดียว |
 | `pay_run_items` | ผลต่อคน: gross, taxable, SSO, WHT, advance, net + `lines`/`warnings`/`input` jsonb | `input` = snapshot ของ `PayInput`, warnings = `[{th, en}]` |
 | `shift_templates` | ชื่อกะ, start/end (`time`), break_minutes, color, archived | ลบแม่แบบที่ใช้แล้ว = archived |
+| `work_policies` | นโยบายการทำงาน: name (unique ต่อร้าน), description, `cycle_weeks` (1–8), `anchor_date` (จันทร์ที่เริ่มสัปดาห์แรกของรอบ), archived | พนักงานคนละ 1 นโยบาย (`employees.work_policy_id`, ลบนโยบาย = SetNull) · ใช้สร้าง `shifts` ผ่าน `/shifts/generate` ไม่ทับกะเดิม |
+| `work_policy_days` | วันในแพทเทิร์น: week_index (0-based), day_index (0 = จันทร์), shift_template_id (Restrict) — ไม่มีแถว = วันหยุด | unique (tenant, policy, week, day) · แม่แบบที่ถูกอ้างอิง = archived แทนการลบ |
 | `shifts` | 1 คน 1 วัน: template (nullable), start/end/break คัดลอกจากแม่แบบ, note | unique (tenant, employee, date); end < start = ข้ามเที่ยงคืน |
 | `audit_logs` | ใคร/อะไร/เมื่อไหร่ ของ entity `IAudited`, `changes` jsonb | เขียนอัตโนมัติ |
 

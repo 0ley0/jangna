@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /*
- * Theme: Hearth (powerd_bese_desinge/Hearth.html) — ครีม เบจ หมึก เทอร์ราคอตต้า
+ * Theme: Hearth (soft sage) ตาม jangna-design-spec — พื้นครีมหม่น การ์ดมุมโค้ง 28 ขอบบาง ไม่มีเงา sage เป็นสีเด่นเดียว
  * สี shadcn (primary, muted, border ...) ถูก map ไปที่ palette ของ Hearth
  * สีเพิ่ม: brand (เทอร์ราคอตต้า), surface (การ์ด), sage/plum/amber (แท็ก)
  */
@@ -69,11 +69,15 @@
   --color-brand-ink: var(--brand-ink);
   --color-brand-action: var(--brand-action);
   --color-brand-action-hover: var(--brand-action-hover);
+  --color-sage-line: var(--sage-line);
+  --color-disabled-bg: var(--disabled-bg);
+  --color-disabled-text: var(--disabled-text);
 
-  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 8px 24px -12px rgba(74, 64, 54, 0.1);
-  --shadow-pop: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 1px 2px rgba(74, 64, 54, 0.04), 0 18px 40px -20px rgba(74, 64, 54, 0.18);
-  --shadow-ink: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 6px 14px -6px rgba(42, 37, 32, 0.45);
-  --shadow-brand: 0 1px 0 rgba(255, 255, 255, 0.18) inset, 0 8px 18px -8px rgba(201, 123, 93, 0.55);
+  /* ไม่ใช้เงาหนัก: การ์ด/ปุ่มไม่มีเงา, popover เงาบางมาก */
+  --shadow-card: 0 0 #0000;
+  --shadow-pop: 0 10px 28px -16px rgba(59, 70, 66, 0.16);
+  --shadow-ink: 0 0 #0000;
+  --shadow-brand: 0 0 #0000;
 
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
@@ -110,109 +114,119 @@
 }
 
 :root {
-  --background: #faf6ef;      /* cream */
-  --foreground: #2a2520;      /* ink */
-  --card: #fffdf8;
-  --card-foreground: #2a2520;
-  --popover: #fffdf8;
-  --popover-foreground: #2a2520;
-  --primary: #2a2520;         /* ปุ่มหลักของ Hearth = สีหมึก */
-  --primary-foreground: #faf6ef;
-  --secondary: #f3ead9;       /* beige */
-  --secondary-foreground: #2a2520;
-  --muted: #f3ead9;
-  --muted-foreground: #736350; /* ≥ 4.7:1 บนพื้น/การ์ด/เบจ (เดิม #8b7a66 = 3.8:1 ไม่ผ่าน AA) */
-  --accent: #f3ead9;
-  --accent-foreground: #2a2520;
+  --background: #f4f1ec;      /* page */
+  --foreground: #3b4642;      /* text */
+  --card: #fbfaf7;
+  --card-foreground: #3b4642;
+  --popover: #fbfaf7;
+  --popover-foreground: #3b4642;
+  --primary: #587267;         /* ปุ่มหลัก = sage */
+  --primary-foreground: #f8f6f2;
+  --secondary: #dfe8e1;       /* sage-soft */
+  --secondary-foreground: #3b4a45;
+  --muted: #eae6df;           /* bg-alt */
+  --muted-foreground: #66706b;
+  --accent: #eae6df;
+  --accent-foreground: #3b4642;
   --destructive: #b5473a;
-  --border: #e6d9bf;          /* hairline */
-  --input: #e6d9bf;
-  --ring: #c97b5d;
-  --chart-1: #c97b5d;
-  --chart-2: #8fa284;
-  --chart-3: #d4a256;
-  --chart-4: #9a6b7e;
-  --chart-5: #7a8fa5;
+  --border: #e4dfd6;
+  --input: #ddd7cc;
+  --ring: #7d9487;
+  --chart-1: #587267;
+  --chart-2: #7d9487;
+  --chart-3: #a0845a;
+  --chart-4: #8a6f7c;
+  --chart-5: #6b84a0;
   --radius: 0.75rem;
-  --sidebar: #f6f0e4;         /* cream-2 */
-  --sidebar-foreground: #4a4036;
-  --sidebar-primary: #2a2520;
-  --sidebar-primary-foreground: #faf6ef;
-  --sidebar-accent: #fffdf8;
-  --sidebar-accent-foreground: #2a2520;
-  --sidebar-border: #e6d9bf;
-  --sidebar-ring: #c97b5d;
+  --sidebar: #fbfaf7;
+  --sidebar-foreground: #3b4642;
+  --sidebar-primary: #587267;
+  --sidebar-primary-foreground: #f8f6f2;
+  --sidebar-accent: #dfe8e1;
+  --sidebar-accent-foreground: #3b4a45;
+  --sidebar-border: #e4dfd6;
+  --sidebar-ring: #7d9487;
 
-  /* brand = เทอร์ราคอตต้าของแบรนด์ ใช้กับขอบ/วงแหวนโฟกัส/ตัวอักษรใหญ่/ของตกแต่ง (คอนทราสต์กับครีม ~3:1)
-     ตัวอักษรเล็กบนพื้นสว่างใช้ brand-strong, พื้นปุ่ม/ช่วงวันที่ที่มีตัวอักษรทับใช้ brand-action (≥ 4.8:1) */
-  --brand: #c97b5d;
-  --brand-strong: #a45a3d;
-  --brand-action: #a45a3d;
-  --brand-action-hover: #8e4a30;
-  --brand-soft: #fbe6d7;
-  --brand-ink: #8e4a30;
-  --brand-foreground: #fff8ee;
-  --surface: #fffdf8;
-  --cream-2: #f6f0e4;
-  --beige-2: #ebdfc7;
-  --ink-2: #4a4036;
-  --sage: #8fa284;
-  --sage-soft: #e3ebdb;
-  --sage-ink: #4b5c42;
-  --amber: #d4a256;
-  --amber-soft: #f4e6c7;
-  --amber-ink: #7a5a1d;
-  --plum: #9a6b7e;
-  --plum-soft: #ecdde3;
-  --plum-ink: #6b4254;
-  --blue-soft: #dce5ec;
-  --blue-ink: #3d5266;
+  /* brand = sage: --brand ใช้กับขอบ/โฟกัส/ตกแต่ง (คอนทราสต์ ~3:1)
+     ตัวอักษรเล็กใช้ brand-strong, พื้นที่มีตัวอักษรทับใช้ brand-action */
+  --brand: #7d9487;
+  --brand-strong: #587267;
+  --brand-action: #587267;
+  --brand-action-hover: #4a6157;
+  --brand-soft: #dfe8e1;
+  --brand-ink: #3b4a45;
+  --brand-foreground: #f8f6f2;
+  --surface: #fbfaf7;
+  --cream-2: #f8f6f2;
+  --beige-2: #eae6df;
+  --ink-2: #4a5651;
+  --sage: #7d9487;
+  --sage-soft: #dfe8e1;
+  --sage-ink: #3b4a45;
+  --sage-line: #b9c9bd;
+  --amber: #a0845a;
+  --amber-soft: #efe8dd;
+  --amber-ink: #6b5a3c;
+  --plum: #8a6f7c;
+  --plum-soft: #ece5e8;
+  --plum-ink: #5e4452;
+  --blue-soft: #e5eaf0;
+  --blue-ink: #41566b;
+  --disabled-bg: #ebe7e0;
+  --disabled-text: #8f9692;
 }
 
-/* Hearth "dusk" */
+/* dark: เขียวหม่นเข้ม */
 .dark {
-  --background: #2b2620;
-  --foreground: #f4ecdc;
-  --card: #322c25;
-  --card-foreground: #f4ecdc;
-  --popover: #322c25;
-  --popover-foreground: #f4ecdc;
-  --primary: #f4ecdc;
-  --primary-foreground: #2b2620;
-  --secondary: #3a332b;
-  --secondary-foreground: #f4ecdc;
-  --muted: #3a332b;
-  --muted-foreground: #b0a08a; /* 5.4:1 บนการ์ดมืด (เดิม #9f8e78 = 4.3:1) */
-  --accent: #3a332b;
-  --accent-foreground: #f4ecdc;
+  --background: #232a27;
+  --foreground: #ece9e2;
+  --card: #2b3330;
+  --card-foreground: #ece9e2;
+  --popover: #2b3330;
+  --popover-foreground: #ece9e2;
+  --primary: #9db5a8;
+  --primary-foreground: #1f2623;
+  --secondary: #34403b;
+  --secondary-foreground: #ece9e2;
+  --muted: #34403b;
+  --muted-foreground: #a9b3ad;
+  --accent: #34403b;
+  --accent-foreground: #ece9e2;
   --destructive: #e07a6a;
-  --border: #4a4138;
-  --input: #4a4138;
-  --ring: #c97b5d;
-  --sidebar: #322c25;
-  --sidebar-foreground: #d9ccb5;
-  --sidebar-primary: #f4ecdc;
-  --sidebar-primary-foreground: #2b2620;
-  --sidebar-accent: #3a332b;
-  --sidebar-accent-foreground: #f4ecdc;
-  --sidebar-border: #4a4138;
-  --sidebar-ring: #c97b5d;
+  --border: #3f4a45;
+  --input: #46524c;
+  --ring: #7d9487;
+  --sidebar: #2b3330;
+  --sidebar-foreground: #d5dad5;
+  --sidebar-primary: #9db5a8;
+  --sidebar-primary-foreground: #1f2623;
+  --sidebar-accent: #34403b;
+  --sidebar-accent-foreground: #ece9e2;
+  --sidebar-border: #3f4a45;
+  --sidebar-ring: #7d9487;
 
-  --brand-strong: #e8a98c;
-  --brand-soft: #4a3329;
-  --brand-ink: #f0b89c;
-  --plum-soft: #43303a;
-  --plum-ink: #e6c4d2;
+  --brand: #7d9487;
+  --brand-strong: #a9c0b3;
+  --brand-action: #6f897b;
+  --brand-action-hover: #7d9a8b;
+  --brand-soft: #34403b;
+  --brand-ink: #cfdcd3;
+  --brand-foreground: #151a18;
+  --plum-soft: #3d3338;
+  --plum-ink: #e0ccd5;
   --blue-soft: #2f3a44;
   --blue-ink: #c4d4e2;
-  --surface: #322c25;
-  --cream-2: #322c25;
-  --beige-2: #473e33;
-  --ink-2: #d9ccb5;
-  --sage-soft: #34402f;
-  --sage-ink: #c3d3b6;
-  --amber-soft: #463a22;
-  --amber-ink: #ecc98a;
+  --surface: #2b3330;
+  --cream-2: #2b3330;
+  --beige-2: #3a4641;
+  --ink-2: #d5dad5;
+  --sage-soft: #34403b;
+  --sage-ink: #cfdcd3;
+  --sage-line: #52625a;
+  --amber-soft: #3f382b;
+  --amber-ink: #e3cfa6;
+  --disabled-bg: #34403b;
+  --disabled-text: #8a948e;
 }
 
 @layer base {
@@ -221,15 +235,10 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    /* แสงอุ่นจางๆ มุมจอ แบบ .bg-warmth ของ Hearth */
-    background:
-      radial-gradient(800px 400px at 100% -10%, rgba(212, 162, 86, 0.1), transparent 60%),
-      radial-gradient(700px 380px at -5% 110%, rgba(201, 123, 93, 0.08), transparent 55%),
-      var(--background);
-    background-attachment: fixed;
   }
   html {
     @apply font-sans;
+    font-size: 112.5%; /* ฐาน 18px: ตัวอักษรและระยะทั้งหมดใหญ่ขึ้น 12.5% */
   }
 }
 
@@ -243,14 +252,9 @@
 
   /* การ์ดไล่สีอุ่น (card-warm) — ใช้กับแถบต้อนรับ/สรุป */
   .card-warm {
-    background: linear-gradient(180deg, #fbf4e5 0%, #f4e8d0 100%);
-    border: 1px solid #e8d8b4;
-    border-radius: 18px;
-    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 12px 28px -16px rgba(184, 105, 73, 0.18);
-  }
-  .dark .card-warm {
-    background: linear-gradient(180deg, #3a3129 0%, #332b23 100%);
-    border-color: #4a4138;
+    background: var(--cream-2);
+    border: 1px solid var(--border);
+    border-radius: 28px;
   }
 
   .tabular { font-variant-numeric: tabular-nums; }

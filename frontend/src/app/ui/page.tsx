@@ -66,7 +66,7 @@ export default function UiPage() {
       <Section title={t("ปุ่ม", "Button")} code="components/ui/button">
         <Row>
           <Button>{t("หลัก (หมึก)", "Default (ink)")}</Button>
-          <Button variant="accent">{t("เน้น (เทอร์ราคอตต้า)", "Accent")}</Button>
+          <Button variant="accent">{t("เน้น (sage)", "Accent")}</Button>
           <Button variant="outline">Outline</Button>
           <Button variant="secondary">Secondary</Button>
           <Button variant="ghost">Ghost</Button>
@@ -264,7 +264,7 @@ export default function UiPage() {
           {(Object.keys(Icon) as (keyof typeof Icon)[]).map((name) => {
             const I = Icon[name];
             return (
-              <span key={name} title={name} className="flex flex-col items-center gap-1 rounded-xl border bg-surface px-2.5 py-2 text-[10px] text-muted-foreground">
+              <span key={name} title={name} className="flex flex-col items-center gap-1 rounded-xl border bg-surface px-2.5 py-2 text-xs text-muted-foreground">
                 <I size={18} className="text-foreground" />
                 {name}
               </span>

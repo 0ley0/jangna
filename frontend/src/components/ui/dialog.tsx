@@ -14,7 +14,7 @@ const backdropClass =
 const viewportClass = "fixed inset-0 z-40 grid place-items-start justify-items-center overflow-y-auto p-4 sm:place-items-center"
 // ไม่ใส่ overflow-hidden — DatePicker เป็น popover แบบ absolute ข้างในต้องไม่ถูกตัด
 const popupClass =
-  "relative w-full rounded-[18px] border bg-surface p-5 text-foreground shadow-pop outline-none transition-all duration-200 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 sm:p-6"
+  "relative w-full rounded-[28px] border bg-surface p-6 text-foreground shadow-pop outline-none transition-all duration-200 data-[ending-style]:scale-95 data-[ending-style]:opacity-0 data-[starting-style]:scale-95 data-[starting-style]:opacity-0 sm:p-8"
 
 const sizes = { sm: "max-w-md", md: "max-w-xl", lg: "max-w-3xl" } as const
 

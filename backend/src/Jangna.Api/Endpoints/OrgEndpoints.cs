@@ -38,6 +38,9 @@ public static class OrgEndpoints
             if (!OptionalDigits(req.SsoAccountNo, 10)) errors["ssoAccountNo"] = [L.T("เลขที่บัญชีนายจ้างต้องเป็นตัวเลข 10 หลัก", "Employer account no. must be 10 digits")];
             if (!OptionalDigits(req.TaxBranchNo, 6, required: true)) errors["taxBranchNo"] = [L.T("สาขาต้องเป็นตัวเลข 6 หลัก (สำนักงานใหญ่ 000000)", "Branch no. must be 6 digits (head office 000000)")];
             if (!OptionalDigits(req.SsoBranchNo, 6, required: true)) errors["ssoBranchNo"] = [L.T("สาขาต้องเป็นตัวเลข 6 หลัก (สำนักงานใหญ่ 000000)", "Branch no. must be 6 digits (head office 000000)")];
+            if (Blank(req.LegalName) is { Length: > 200 }) errors["legalName"] = [L.T("ชื่อนิติบุคคลยาวไม่เกิน 200 ตัวอักษร", "Legal name must be at most 200 characters")];
+            if (Blank(req.Address) is { Length: > 500 }) errors["address"] = [L.T("ที่อยู่ยาวไม่เกิน 500 ตัวอักษร", "Address must be at most 500 characters")];
+            if (Blank(req.RdUserId) is { Length: > 20 }) errors["rdUserId"] = [L.T("RD User ID ยาวไม่เกิน 20 ตัวอักษร", "RD user ID must be at most 20 characters")];
             if (errors.Count > 0) return Results.ValidationProblem(errors);
 
             var shop = await db.Tenants.SingleOrDefaultAsync(t => t.Id == tenant.TenantId, ct);
@@ -102,6 +105,10 @@ public static class OrgEndpoints
         if (!System.Text.RegularExpressions.Regex.IsMatch(req.ProvinceCode ?? "", @"^TH-\d{2}$"))
             errors["provinceCode"] = [L.T("รหัสจังหวัดต้องเป็น ISO 3166-2:TH เช่น TH-10", "Province code must be ISO 3166-2:TH, e.g. TH-10")];
         if (req.GeoLat is not null != req.GeoLng is not null) errors["geo"] = [L.T("ต้องระบุทั้ง lat และ lng", "Both lat and lng are required")];
+        if (!string.IsNullOrWhiteSpace(req.Name) && req.Name.Trim().Length > 100) errors["name"] = [L.T("ชื่อสาขายาวไม่เกิน 100 ตัวอักษร", "Branch name must be at most 100 characters")];
+        if (req.AreaCode is { } area && area.Trim().Length > 16) errors["areaCode"] = [L.T("รหัสอำเภอยาวไม่เกิน 16 ตัวอักษร", "Area code must be at most 16 characters")];
+        if (req.GeoLat is < -90 or > 90) errors["geoLat"] = [L.T("ละติจูดต้องอยู่ระหว่าง -90 ถึง 90", "Latitude must be between -90 and 90")];
+        if (req.GeoLng is < -180 or > 180) errors["geoLng"] = [L.T("ลองจิจูดต้องอยู่ระหว่าง -180 ถึง 180", "Longitude must be between -180 and 180")];
         if (req.GeoRadiusMeters is < 20 or > 5000) errors["geoRadiusMeters"] = [L.T("รัศมี 20–5000 เมตร", "Radius must be 20–5000 metres")];
         return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
     }

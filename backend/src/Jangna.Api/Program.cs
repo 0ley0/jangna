@@ -17,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
 
 builder.Services.AddOpenApi();
-builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+// enum รับเฉพาะชื่อ (ไม่รับตัวเลข) — ไม่งั้น {"status":99} จะถูกบันทึกเป็นสถานะที่ไม่มีอยู่จริง
+builder.Services.ConfigureHttpJsonOptions(o => o.SerializerOptions.Converters.Add(new JsonStringEnumConverter(namingPolicy: null, allowIntegerValues: false)));
 builder.Services.AddProblemDetails(o =>
 {
     // dev เท่านั้น: แนบ exception ใน 500 เพื่อ debug ง่าย
@@ -106,12 +107,14 @@ app.MapGroup("/api")
     .MapAuthEndpoints()
     .MapOrgEndpoints()
     .MapEmployeeEndpoints()
+    .MapDocumentEndpoints()
     .MapLiffEndpoints()
     .MapLegalEndpoints()
     .MapWorkEndpoints()
     .MapPayRunEndpoints()
     .MapExportEndpoints()
-    .MapShiftEndpoints();
+    .MapShiftEndpoints()
+    .MapWorkPolicyEndpoints();
 
 app.Run();
 

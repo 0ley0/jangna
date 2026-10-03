@@ -46,7 +46,7 @@ public class EmployeeImportTests(ApiFactory factory) : IClassFixture<ApiFactory>
         using var wb = new XLWorkbook(await response.Content.ReadAsStreamAsync());
         var ws = wb.Worksheet("พนักงาน");
         Assert.Contains("ชื่อ", ws.Cell(1, 1).GetString());
-        Assert.Equal(16, ws.LastColumnUsed()!.ColumnNumber());
+        Assert.Equal(17, ws.LastColumnUsed()!.ColumnNumber());
         Assert.Contains("โกดังบางนา", ws.Cell(2, 5).GetDataValidation().Value);
     }
 
@@ -112,6 +112,28 @@ public class EmployeeImportTests(ApiFactory factory) : IClassFixture<ApiFactory>
         // นำเข้าซ้ำ → ชนบัตรที่มีอยู่แล้ว
         var again = await http.PostAsync("/api/employees/import?dryRun=true", Upload(Workbook(Good("ซ้ำ"))));
         Assert.Contains((await again.Content.ReadFromJsonAsync<EmployeeImport.Report>(Json.Options))!.Rows[0].Errors, e => e.Contains("ใช้กับพนักงานคนอื่นแล้ว"));
+    }
+
+    [Fact]
+    public async Task Work_policy_column_matches_by_name()
+    {
+        var http = await factory.RegisterShopAsync("ร้านนโยบายนำเข้า", $"imp3-{Guid.NewGuid():N}@test.local");
+        var policy = (await (await http.PostAsJsonAsync("/api/work-policies",
+                new WorkPolicyEndpoints.PolicyRequest("แพ็คเกอร์กะเช้า", null, 1, new DateOnly(2026, 10, 5), []), Json.Options))
+            .Content.ReadFromJsonAsync<WorkPolicyEndpoints.PolicyDto>(Json.Options))!;
+
+        var template = await http.GetAsync("/api/employees/import/template");
+        using (var wb = new XLWorkbook(await template.Content.ReadAsStreamAsync()))
+            Assert.Contains("แพ็คเกอร์กะเช้า", wb.Worksheet("พนักงาน").Cell(2, 17).GetDataValidation().Value);
+
+        string[] WithPolicy(string name, string nid, string policyName) => [.. Good(name, nid), policyName];
+        var bad = await http.PostAsync("/api/employees/import?dryRun=true", Upload(Workbook(WithPolicy("ก", "1101700203450", "ไม่มีนโยบายนี้"))));
+        Assert.Contains((await bad.Content.ReadFromJsonAsync<EmployeeImport.Report>(Json.Options))!.Rows[0].Errors, e => e.Contains("ไม่พบนโยบายการทำงาน"));
+
+        var ok = await http.PostAsync("/api/employees/import", Upload(Workbook(WithPolicy("ข", "1101700203450", "แพ็คเกอร์กะเช้า"))));
+        Assert.Equal(1, (await ok.Content.ReadFromJsonAsync<EmployeeImport.Report>(Json.Options))!.Imported);
+        var employee = (await http.GetFromJsonAsync<List<EmployeeEndpoints.EmployeeDto>>("/api/employees", Json.Options))!.Single();
+        Assert.Equal(policy.Id, employee.WorkPolicyId);
     }
 
     [Fact]

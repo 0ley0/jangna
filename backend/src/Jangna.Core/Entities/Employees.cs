@@ -46,6 +46,10 @@ public sealed class Employee : TenantEntity, IAudited
     public string? Province { get; set; }
     public string? PostalCode { get; set; }
 
+    /// <summary>นโยบายการทำงาน (คนละ 1 อัน) — ว่าง = ไม่มีกะประจำ</summary>
+    public Guid? WorkPolicyId { get; set; }
+    public WorkPolicy? WorkPolicy { get; set; }
+
     public Guid? BranchId { get; set; }
     public Branch? Branch { get; set; }
 
@@ -74,4 +78,28 @@ public sealed class EmployeeInvite : TenantEntity
     public DateTimeOffset? UsedAt { get; set; }
 
     public bool IsUsable(DateTimeOffset now) => UsedAt is null && now < ExpiresAt;
+}
+
+public enum DocumentType
+{
+    Passport,
+    Visa,
+    WorkPermit,
+    PinkCard,
+    Other,
+}
+
+/// <summary>เอกสารของพนักงาน (แรงงานต่างด้าว: พาสปอร์ต วีซ่า ใบอนุญาตทำงาน บัตรชมพู) — ใช้แจ้งเตือนก่อนหมดอายุ ยังไม่เก็บไฟล์สแกน</summary>
+public sealed class EmployeeDocument : TenantEntity, IAudited
+{
+    public Guid EmployeeId { get; set; }
+    public Employee? Employee { get; set; }
+    public DocumentType Type { get; set; }
+    public string? Number { get; set; }
+    public DateOnly? IssuedOn { get; set; }
+
+    /// <summary>ไม่มีวันหมดอายุ = null (ไม่แจ้งเตือน)</summary>
+    public DateOnly? ExpiresOn { get; set; }
+
+    public string? Note { get; set; }
 }

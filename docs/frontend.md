@@ -5,24 +5,25 @@ Next.js **16** — ต่างจากที่คุ้นเคย: อ่�
 - `middleware` เปลี่ยนชื่อเป็น `proxy`; route types มาจาก `npx next typegen` (`LayoutProps<"/app">`, `PageProps<...>`)
 - หน้าใน `app/app/*` เป็น client component ทั้งหมด (token อยู่ใน localStorage, ดึงข้อมูลด้วย TanStack Query)
 
-## ดีไซน์: Hearth
-ต้นฉบับ: `powerd_bese_desinge/Hearth.html` + `DatePicker-standalone-src.html` (อ้างอิงเท่านั้น ไม่ได้ import)
+## ดีไซน์: Hearth (soft sage — ตาม `jangna-design-spec.md`, 2026-10-03)
+ธีมเดิมเป็นเทอร์ราคอตต้า/หมึก ถูกแทนด้วย sage หม่น: การ์ด radius 28 ขอบบาง ไม่มีเงา · ปุ่ม pill · อินพุต/Select ขอบ 2px radius 16 · สถานะ disabled ใช้ `bg-disabled-bg text-disabled-text`
+ชื่อ token เดิมคงไว้ (`brand*` ตอนนี้คือ sage) เพื่อไม่ต้องแก้ทุกหน้า
 Token อยู่ใน `src/app/globals.css` — **ใช้ class จาก token เสมอ อย่าใส่สี hex ในหน้า**
 
 | ความหมาย | class |
 |---|---|
 | พื้นครีม / การ์ด | `bg-background` / `bg-card`, `bg-surface` |
 | เบจ (hover, muted) | `bg-muted`, `bg-secondary`, `bg-beige-2`, `bg-cream-2` |
-| ตัวอักษร | `text-foreground` (หมึก), `text-ink-2`, `text-muted-foreground` |
-| แบรนด์ เทอร์ราคอตต้า | `bg-brand` / `border-brand` / `ring-brand` (ตกแต่ง, ขอบ, โฟกัส — คอนทราสต์กับครีมแค่ ~3:1 **ห้ามใช้เป็นพื้นของตัวอักษร**), `text-brand-strong` (ตัวอักษรเล็กบนพื้นสว่าง), `bg-brand-action` + `text-brand-foreground` (พื้นปุ่ม/ช่วงวันที่ที่มีตัวอักษรทับ), `bg-brand-soft text-brand-ink` |
+| ตัวอักษร | `text-foreground` (sage), `text-ink-2`, `text-muted-foreground` |
+| แบรนด์ sage | `bg-brand` / `border-brand` / `ring-brand` (ตกแต่ง, ขอบ, โฟกัส — คอนทราสต์กับครีมแค่ ~3:1 **ห้ามใช้เป็นพื้นของตัวอักษร**), `text-brand-strong` (ตัวอักษรเล็กบนพื้นสว่าง), `bg-brand-action` + `text-brand-foreground` (พื้นปุ่ม/ช่วงวันที่ที่มีตัวอักษรทับ), `bg-brand-soft text-brand-ink`, เส้น outline `border-sage-line` |
 | แท็กสี Chip | `bg-plum-soft text-plum-ink`, `bg-blue-soft text-blue-ink` (สลับตามโหมดมืดเอง) |
 | แท็ก | `bg-sage-soft text-sage-ink` (สำเร็จ), `bg-amber-soft text-amber-ink` (เตือน) |
 | เส้นขอบ | `border` (= hairline `#E6D9BF`) |
-| เงา | `shadow-card`, `shadow-pop` (popover), `shadow-ink` (ปุ่มหมึก), `shadow-brand` |
+| เงา | ไม่ใช้ (`shadow-card/ink/brand` = none) · `shadow-pop` บางมากเฉพาะ popover |
 | พิเศษ | `.card-warm` (การ์ดไล่สีอุ่น), `.glass` (header โปร่ง), `.tabular` (ตัวเลขเท่ากัน), `animate-pop-in`, `animate-fade-up` |
 | โหมดมืด | class `.dark` = palette "dusk" (ยังไม่มีปุ่มสลับ) |
 
-ฟอนต์: **Noto Sans Thai** ฟอนต์เดียว (มีตัวละตินในตัว, variable weight — `next/font` ใน `app/layout.tsx`) · การ์ดมุม 18px · ปุ่ม/อินพุต `rounded-xl`
+ฟอนต์: **Noto Sans Thai** ฟอนต์เดียว (มีตัวละตินในตัว, variable weight — `next/font` ใน `app/layout.tsx`) · การ์ดมุม 28px · ปุ่ม `rounded-full` · อินพุต `rounded-2xl`
 
 **คอนทราสต์ (WCAG 2.1 AA — เป้าหมายของโปรดักต์):** ตัวอักษรปกติ ≥ 4.5:1, ใหญ่/ไอคอน ≥ 3:1 — `text-muted-foreground` ผ่านแล้วทั้งโหมดสว่าง/มืด; สีอวาตาร์ใช้ `avatarColors` จาก `components/icons.tsx`
 **จอสัมผัส:** `globals.css` ขยายพื้นที่กด Button / Select / Chip เป็น ≥ 44px อัตโนมัติด้วย `(pointer: coarse)` · **ลด motion:** `prefers-reduced-motion` เหลือแค่ fade (ไม่เลื่อน/ซูม)
@@ -30,10 +31,10 @@ Token อยู่ใน `src/app/globals.css` — **ใช้ class จาก t
 ## Component (`src/components/`) — ดูตัวอย่างทุกตัวที่ **http://localhost:3000/ui**
 | component | ไฟล์ | ใช้ |
 |---|---|---|
-| `Button` | ui/button | variant: `default` (หมึก), **`accent`** (เทอร์ราคอตต้า — CTA หลัก), `outline`, `ghost`, `secondary`, `destructive`, `link`; size `sm`/`lg`/`icon`; **`loading`** (วงหมุน + กดซ้ำไม่ได้); `Spinner` |
+| `Button` | ui/button | variant: `default` (หมึก), **`accent`** (sage เหมือน default), `outline`, `ghost`, `secondary`, `destructive`, `link`; size `sm`/`lg`/`icon`; **`loading`** (วงหมุน + กดซ้ำไม่ได้); `Spinner` |
 | `TextField`, `SelectField`, `TextareaField`, `FormField`, `FormError` | ui/form-field | ฟิลด์ฟอร์ม = label (+ `*` ถ้า required) + control + `hint` + error (`error=` หรือ `errors={apiError.fieldErrors}` ใช้ key = `name`) |
 | `Input`, `Textarea` | ui/input, ui/textarea | control เปล่า (ไม่มี label) |
-| `Select` | ui/select | **popover แบบ DatePicker** (ตัวที่เลือก = พื้นหมึก + ถูก), รับ `<option>` children หรือ `options=[{value,label,hint,disabled}]`, `value`+`onValueChange` หรือ `defaultValue`, `name`/`required` ส่งกับฟอร์มได้, ค้นหาอัตโนมัติเมื่อเกิน 8 รายการ (`searchable`), คีย์บอร์ด ↑↓ Enter Esc, render ผ่าน portal (ใช้ในตารางได้ไม่โดนตัด), `size="sm"` |
+| `Select` | ui/select | **popover แบบ DatePicker** (ตัวที่เลือก = พื้น sage-soft), รับ `<option>` children หรือ `options=[{value,label,hint,disabled}]`, `value`+`onValueChange` หรือ `defaultValue`, `name`/`required` ส่งกับฟอร์มได้, ค้นหาอัตโนมัติเมื่อเกิน 8 รายการ (`searchable`), คีย์บอร์ด ↑↓ Enter Esc, render ผ่าน portal (ใช้ในตารางได้ไม่โดนตัด), `size="sm"` |
 | `Chip`, `ChipGroup` | ui/chip | pill แบบ `.chip`/`.tag` ของ Hearth: `tone` neutral/brand/sage/amber/plum/blue, `selected` + `onClick` (ตัวกรอง), `onRemove`; `ChipGroup` = เลือกค่าเดียวพร้อม `count` |
 | `Badge` | ui/badge | สถานะเล็ก: `default`, **`success`**, **`warning`**, `outline`, `destructive` |
 | `Dialog`, `useConfirm` | ui/dialog | **เพิ่ม/แก้ข้อมูลใช้ `Dialog` ไม่วางฟอร์มในหน้า** (`open`/`onOpenChange`/`title`/`size`; ปิดด้วย Esc/พื้นหลัง/×; ปิดเองใน `onSuccess`, เรียก `mutation.reset()` ตอนเปิดเพื่อล้าง error). ลบ/ปิดรอบ/ย้อนกลับไม่ได้ ใช้ `const { ask, dialog } = useConfirm()` แทน `window.confirm`: `if (await ask({ title, description, tone: "danger" })) ...` แล้วใส่ `{dialog}` ใน JSX. Dialog = z-40 ต่ำกว่า popover ของ Select (z-50) |

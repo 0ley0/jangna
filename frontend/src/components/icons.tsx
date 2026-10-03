@@ -31,6 +31,8 @@ const make = (paths: React.ReactNode) => {
 };
 
 export const Icon = {
+  Menu: make(<path d="M4 7h16M4 12h16M4 17h16" />),
+  Close: make(<path d="M6 6l12 12M18 6 6 18" />),
   Home: make(<><path d="M3.5 11 12 4l8.5 7" /><path d="M5 10v9h14v-9" /><path d="M10 19v-5h4v5" /></>),
   Tasks: make(<><rect x="3.5" y="4.5" width="17" height="15" rx="3" /><path d="M7.5 9.5l2 2 4-4" /><path d="M7.5 15.5h7" /></>),
   Cal: make(<><rect x="3.5" y="5" width="17" height="15" rx="3" /><path d="M3.5 10h17M8 3.5v3M16 3.5v3" /></>),
@@ -61,7 +63,7 @@ export const Icon = {
   Line: make(<><path d="M12 4C7 4 3.5 7.2 3.5 11c0 2.4 1.4 4.5 3.6 5.8-.2 1.1-.7 2.3-1.1 3.2 1.6-.4 3.3-1.3 4.5-2.2.5.1 1 .2 1.5.2 5 0 8.5-3.2 8.5-7S17 4 12 4z" /></>),
 };
 
-/** โลโก้จ้างนะ: กระเบื้องเทอร์ราคอตต้าไล่สีแบบ brand mark ของ Hearth + ตัว "จ" */
+/** โลโก้จ้างนะ: กระเบื้อง sage + ตัว "จ" */
 export function BrandMark({ size = 32 }: { size?: number }) {
   return (
     <div
@@ -69,7 +71,7 @@ export function BrandMark({ size = 32 }: { size?: number }) {
       style={{
         width: size,
         height: size,
-        background: "linear-gradient(180deg, #E89976 0%, #C97B5D 100%)",
+        background: "#587267",
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35), 0 4px 10px -4px rgba(201,123,93,0.5)",
         fontSize: size * 0.5,
         fontWeight: 700,
@@ -83,9 +85,9 @@ export function BrandMark({ size = 32 }: { size?: number }) {
 }
 
 /** สีพื้นอวาตาร์ — เข้มพอให้ตัวอักษรครีมทับได้ผ่าน AA (≥ 4.8:1) */
-export const avatarColors = ["#A45A3D", "#5F7355", "#86576B", "#8A6420", "#566B82"];
+export const avatarColors = ["#587267", "#41566b", "#6b5a3c", "#5e4452", "#4a6157"];
 
-export function Avatar({ name, color = "#7D6249", size = 30 }: { name: string; color?: string; size?: number }) {
+export function Avatar({ name, color = "#587267", size = 30 }: { name: string; color?: string; size?: number }) {
   const initials = name.trim().slice(0, 2).toUpperCase();
   return (
     <span

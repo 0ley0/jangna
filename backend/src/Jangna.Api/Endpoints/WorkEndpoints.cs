@@ -11,6 +11,9 @@ namespace Jangna.Api.Endpoints;
 /// <summary>ข้อมูลที่ใช้คำนวณเงินเดือน: วันทำงาน, ผลงานต่อชิ้น, เงินเบิก, วันหยุดร้าน</summary>
 public static class WorkEndpoints
 {
+    /// <summary>หน้ากรอกตารางทั้งเดือน: พนักงาน ~50 คน × 31 วัน = 1,550 แถว</summary>
+    public const int MaxWorkDayBatch = 2000;
+
     public sealed record WorkDayRequest(
         Guid EmployeeId, DateOnly Date, DayKind Kind, decimal NormalHours, decimal OvertimeHours, LeaveKind Leave, string? Note);
 
@@ -55,6 +58,8 @@ public static class WorkEndpoints
         // upsert หลายวันพร้อมกัน (หน้ากรอกตารางทั้งเดือน) — 1 พนักงาน 1 วัน มีได้ 1 แถว
         manager.MapPut("/work-days", async (List<WorkDayRequest> items, JangnaDbContext db, PayRunService runs, CancellationToken ct) =>
         {
+            if (items.Count > MaxWorkDayBatch)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["items"] = [L.T($"บันทึกได้ครั้งละไม่เกิน {MaxWorkDayBatch} วัน", $"At most {MaxWorkDayBatch} days per save")] });
             var errors = new Dictionary<string, string[]>();
             for (var i = 0; i < items.Count; i++)
             {
@@ -113,7 +118,9 @@ public static class WorkEndpoints
             var errors = new Dictionary<string, string[]>();
             if (string.IsNullOrWhiteSpace(x.Description)) errors["description"] = [L.T("กรุณาระบุงาน", "Describe the work")];
             if (x.Quantity <= 0) errors["quantity"] = [L.T("จำนวนต้องมากกว่า 0", "Quantity must be greater than 0")];
+            else if (x.Quantity > Limits.Money) errors["quantity"] = [L.T("จำนวนสูงเกินไป", "Quantity is too large")];
             if (x.Rate < 0) errors["rate"] = [L.T("อัตราติดลบไม่ได้", "Rate cannot be negative")];
+            else if (x.Rate > Limits.Rate) errors["rate"] = [L.T("อัตราสูงเกินไป", "Rate is too large")];
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             if (await Guard([x.Date], [x.EmployeeId], db, runs, ct) is { } blocked) return blocked;
 
@@ -150,6 +157,7 @@ public static class WorkEndpoints
         manager.MapPost("/advances", async (AdvanceRequest x, JangnaDbContext db, CancellationToken ct) =>
         {
             if (x.Amount == 0) return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("กรุณาระบุจำนวนเงิน", "Enter an amount")] });
+            if (Math.Abs(x.Amount) > Limits.Money) return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("จำนวนเงินสูงเกินไป", "Amount is too large")] });
             if (!await db.Employees.AnyAsync(e => e.Id == x.EmployeeId, ct)) return Results.NotFound();
 
             var advance = new Advance { EmployeeId = x.EmployeeId, Date = x.Date, Amount = x.Amount, Note = x.Note };
@@ -169,6 +177,12 @@ public static class WorkEndpoints
         {
             if (x.TaxableIncome < 0 || x.TaxWithheld < 0 || x.SocialSecurity < 0)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("ยอดติดลบไม่ได้", "Amounts cannot be negative")] });
+            if (x.Year is < 2000 or > 2100)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["year"] = [L.T("ปีไม่ถูกต้อง", "Invalid year")] });
+            if (Math.Max(x.TaxableIncome, Math.Max(x.TaxWithheld, x.SocialSecurity)) > Limits.BigMoney)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["amount"] = [L.T("ยอดสูงเกินไป", "Amount is too large")] });
+            if (x.TaxWithheld > x.TaxableIncome)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["taxWithheld"] = [L.T("ภาษีที่หักไปแล้วต้องไม่เกินเงินได้สะสม", "Tax withheld cannot exceed taxable income")] });
             if (!await db.Employees.AnyAsync(e => e.Id == x.EmployeeId, ct)) return Results.NotFound();
             // ยอดยกมาใช้ตั้งต้นการประมาณภาษี — เปลี่ยนหลังปิดรอบแรกของปีแล้วจะทำให้รอบที่ปิดไปไม่ตรงกับยอดใหม่
             if (await db.PayRuns.AnyAsync(r => r.Status == PayRunStatus.Locked && r.PeriodStart.Year == x.Year, ct))

@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChipGroup } from "@/components/ui/chip";
 import { Dialog } from "@/components/ui/dialog";
 import { Icon } from "@/components/icons";
+import { DocumentsDialog } from "./documents-dialog";
+import { ExpiringDocs } from "./expiring-docs";
 import { ImportDialog } from "./import-dialog";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormError, SelectField, TextField } from "@/components/ui/form-field";
@@ -15,7 +17,7 @@ import { api, ApiError } from "@/lib/api";
 import { fmtDateTime } from "@/lib/format";
 import { useLang } from "@/lib/i18n";
 import { provinces } from "@/lib/provinces";
-import { keys, useBranches, useEmployees } from "@/lib/queries";
+import { keys, useBranches, useEmployees, useWorkPolicies } from "@/lib/queries";
 import { payTypeLabels, payTypeUnit, titleLabels, type Employee, type Invite, type PayType, type Title } from "@/lib/types";
 
 /** ข้อมูลที่ไฟล์ สปส.1-10 / ภ.ง.ด.1 ต้องใช้ (ฟรีแลนซ์ไม่เข้า สปส.) */
@@ -28,6 +30,7 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<Employee | null>(null);
   const [adding, setAdding] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [docsFor, setDocsFor] = useState<{ id: string; name: string } | null>(null);
   const [formKey, setFormKey] = useState(0); // เปลี่ยนทุกครั้งที่เปิด เพื่อล้าง state ภายในฟอร์ม
   const [invite, setInvite] = useState<{ employee: Employee; invite: Invite } | null>(null);
 
@@ -73,6 +76,8 @@ export default function EmployeesPage() {
       </div>
 
       <ImportDialog open={importing} onClose={() => setImporting(false)} />
+      <DocumentsDialog employee={docsFor} onClose={() => setDocsFor(null)} />
+      <ExpiringDocs onOpen={setDocsFor} />
 
       <EmployeeForm key={formKey} open={adding || editing !== null} employee={editing} onDone={closeForm} />
 
@@ -88,6 +93,7 @@ export default function EmployeesPage() {
                   <TableHead>{t("ชื่อ", "Name")}</TableHead>
                   <TableHead>{t("สาขา", "Branch")}</TableHead>
                   <TableHead>{t("ค่าจ้าง", "Pay")}</TableHead>
+                  <TableHead>{t("นโยบายงาน", "Work policy")}</TableHead>
                   <TableHead>LINE</TableHead>
                   <TableHead />
                 </TableRow>
@@ -110,6 +116,7 @@ export default function EmployeesPage() {
                       {t(...payTypeLabels[e.payType])}
                       {e.baseRate > 0 && <span className="text-muted-foreground"> · {e.baseRate.toLocaleString("th-TH")}</span>}
                     </TableCell>
+                    <TableCell>{e.workPolicyName ?? <span className="text-muted-foreground">–</span>}</TableCell>
                     <TableCell>
                       {e.lineLinked ? (
                         <Badge variant="success">{t("ผูกแล้ว", "Linked")}</Badge>
@@ -121,13 +128,16 @@ export default function EmployeesPage() {
                       <Button variant="ghost" size="sm" onClick={() => edit(e)}>
                         {t("แก้ไข", "Edit")}
                       </Button>
+                      <Button variant="ghost" size="sm" onClick={() => setDocsFor({ id: e.id, name: `${e.firstName} ${e.lastName}`.trim() })}>
+                        {t("เอกสาร", "Documents")}
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => createInvite.mutate(e)} disabled={createInvite.isPending}>
                         {e.lineLinked ? t("ผูก LINE ใหม่", "Re-link LINE") : t("ส่งลิงก์ผูก LINE", "Send LINE link")}
                       </Button>
                     </TableCell>
                   </TableRow>
                 ))}
-                {shown?.length === 0 && <TableEmpty colSpan={5}>{t("ยังไม่มีพนักงาน", "No employees yet")}</TableEmpty>}
+                {shown?.length === 0 && <TableEmpty colSpan={6}>{t("ยังไม่มีพนักงาน", "No employees yet")}</TableEmpty>}
               </TableBody>
             </Table>
           </div>
@@ -143,6 +153,7 @@ const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim()
 function EmployeeForm({ open, employee, onDone }: { open: boolean; employee: Employee | null; onDone: () => void }) {
   const { t, lang } = useLang();
   const branches = useBranches();
+  const policies = useWorkPolicies();
   const queryClient = useQueryClient();
   const [payType, setPayType] = useState<PayType>(employee?.payType ?? "Piece");
   const [workerType, setWorkerType] = useState(employee?.workerType ?? "Employee");
@@ -168,6 +179,7 @@ function EmployeeForm({ open, employee, onDone }: { open: boolean; employee: Emp
           district: text(form, "district"),
           province: text(form, "province"),
           postalCode: text(form, "postalCode"),
+          workPolicyId: form.get("workPolicyId") || null,
         },
       }),
     onSuccess: () => {
@@ -201,6 +213,17 @@ function EmployeeForm({ open, employee, onDone }: { open: boolean; employee: Emp
                 {b.name}
               </option>
             ))}
+          </SelectField>
+          <SelectField label={t("นโยบายการทำงาน (กะประจำ)", "Work policy (standing shifts)")} name="workPolicyId" defaultValue={e?.workPolicyId ?? ""}>
+            <option value="">{t("— ไม่กำหนด —", "— None —")}</option>
+            {policies.data
+              ?.filter((p) => !p.archived || p.id === e?.workPolicyId)
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                  {p.archived ? ` (${t("เลิกใช้", "archived")})` : ""}
+                </option>
+              ))}
           </SelectField>
           <SelectField label={t("ภาษาใน LINE และสลิป", "LINE & payslip language")} name="language" defaultValue={e?.language ?? "th"}>
             <option value="th">ไทย</option>

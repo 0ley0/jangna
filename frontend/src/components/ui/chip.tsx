@@ -25,15 +25,15 @@ const chipVariants = cva(
         blue: "border-transparent bg-blue-soft text-blue-ink",
       },
       selected: {
-        true: "border-primary bg-primary text-primary-foreground",
+        true: "border-transparent bg-sage-soft font-semibold text-sage-ink",
         false: "",
       },
       interactive: {
-        true: "cursor-pointer hover:border-beige-2 hover:bg-muted focus-visible:ring-4 focus-visible:ring-brand/15 focus-visible:outline-none",
+        true: "cursor-pointer hover:bg-sage-soft focus-visible:ring-4 focus-visible:ring-brand/20 focus-visible:outline-none",
         false: "",
       },
     },
-    compoundVariants: [{ selected: true, interactive: true, className: "hover:border-primary hover:bg-primary/90" }],
+    compoundVariants: [{ selected: true, interactive: true, className: "hover:bg-sage-soft" }],
     defaultVariants: { tone: "neutral", selected: false, interactive: false },
   }
 )
