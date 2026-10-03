@@ -6,7 +6,9 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog } from "@/components/ui/dialog";
+import { Icon } from "@/components/icons";
 import { DateRangeField, monthsShort, toIso, type DateRange, type RangePreset } from "@/components/date-picker";
 import { FormError } from "@/components/ui/form-field";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -37,6 +39,7 @@ export default function PayRunsPage() {
   const { t, lang } = useLang();
   const presets = payPeriodPresets(lang);
   const [period, setPeriod] = useState<DateRange | null>(() => presets[0].get());
+  const [open, setOpen] = useState(false);
 
   const runs = useQuery({ queryKey: ["pay-runs"], queryFn: () => api<PayRunSummary[]>("/api/pay-runs") });
 
@@ -51,22 +54,32 @@ export default function PayRunsPage() {
 
   return (
     <div className="grid gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("สร้างรอบจ่าย", "New pay run")}</CardTitle>
-        </CardHeader>
-        <CardContent className="grid items-end gap-4 sm:grid-cols-3">
-          <div className="sm:col-span-3">
-            <FormError message={create.error?.message} />
+      <div className="flex justify-end">
+        <Button
+          variant="accent"
+          onClick={() => {
+            create.reset();
+            setOpen(true);
+          }}
+        >
+          <Icon.Plus size={16} /> {t("สร้างรอบจ่าย", "New pay run")}
+        </Button>
+      </div>
+
+      <Dialog open={open} onOpenChange={setOpen} size="lg" title={t("สร้างรอบจ่าย", "New pay run")}>
+        <div className="grid gap-4">
+          <FormError message={create.error?.message} />
+          <DateRangeField label={t("ช่วงรอบจ่าย (ต้องอยู่ในเดือนเดียวกัน)", "Pay period (must be within one month)")} value={period} onChange={setPeriod} presets={presets} />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              {t("ยกเลิก", "Cancel")}
+            </Button>
+            <Button variant="accent" onClick={() => create.mutate()} loading={create.isPending} disabled={!period}>
+              {create.isPending ? t("กำลังคำนวณ…", "Calculating…") : t("คำนวณเงินเดือน", "Run payroll")}
+            </Button>
           </div>
-          <div className="sm:col-span-2">
-            <DateRangeField label={t("ช่วงรอบจ่าย (ต้องอยู่ในเดือนเดียวกัน)", "Pay period (must be within one month)")} value={period} onChange={setPeriod} presets={presets} />
-          </div>
-          <Button variant="accent" onClick={() => create.mutate()} disabled={create.isPending || !period}>
-            {create.isPending ? t("กำลังคำนวณ…", "Calculating…") : t("คำนวณเงินเดือน", "Run payroll")}
-          </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </Dialog>
 
       <Card>
         <CardContent>

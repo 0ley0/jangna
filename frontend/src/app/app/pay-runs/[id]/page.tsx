@@ -8,6 +8,7 @@ import { Icon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useConfirm } from "@/components/ui/dialog";
 import { FormError } from "@/components/ui/form-field";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { api, ApiError, downloadFile } from "@/lib/api";
@@ -22,6 +23,7 @@ export default function PayRunPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const me = useMe();
+  const { ask, dialog } = useConfirm();
   const queryKey = ["pay-run", id];
   const [open, setOpen] = useState<string | null>(null);
 
@@ -88,12 +90,30 @@ export default function PayRunPage() {
             <Button variant="outline" onClick={() => recalc.mutate()} disabled={recalc.isPending}>
               {t("คำนวณใหม่", "Recalculate")}
             </Button>
-            <Button variant="ghost" onClick={() => confirm(t("ลบรอบร่างนี้?", "Delete this draft pay run?")) && remove.mutate()}>
+            <Button variant="ghost" onClick={async () => {
+                const ok = await ask({
+                  title: t("ลบรอบร่างนี้?", "Delete this draft pay run?"),
+                  description: t("ผลคำนวณของรอบนี้จะหายไป สร้างใหม่ได้ภายหลัง", "The calculated results of this run will be discarded; you can create it again later"),
+                  tone: "danger",
+                  confirmLabel: t("ลบรอบร่าง", "Delete draft"),
+                });
+                if (ok) remove.mutate();
+              }}>
               {t("ลบ", "Delete")}
             </Button>
             {me.data?.role === "Owner" && (
               <Button
-                onClick={() => confirm(t("ปิดรอบแล้วจะแก้ข้อมูลในช่วงวันนี้ไม่ได้อีก ยืนยัน?", "Once locked, work data in this period can no longer be edited. Continue?")) && lock.mutate()}
+                onClick={async () => {
+                  const ok = await ask({
+                    title: t("ปิดรอบจ่ายนี้?", "Lock this pay run?"),
+                    description: t(
+                      "ปิดรอบแล้วจะแก้ข้อมูลงานในช่วงวันนี้ไม่ได้อีก และรอบนี้จะถูกใช้ออกเอกสารนำส่ง/สลิป",
+                      "Once locked, work data in this period can no longer be edited, and the run is used for filings and payslips",
+                    ),
+                    confirmLabel: t("ปิดรอบ", "Lock run"),
+                  });
+                  if (ok) lock.mutate();
+                }}
                 disabled={lock.isPending || items.length === 0}
               >
                 {t("ปิดรอบ", "Lock pay run")}
@@ -242,6 +262,7 @@ export default function PayRunPage() {
           </Table>
         </CardContent>
       </Card>
+      {dialog}
     </div>
   );
 }

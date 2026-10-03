@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using Jangna.Api.Auth;
+using Jangna.Api.Imports;
 using Jangna.Api.Line;
 using Jangna.Api.Localization;
 using Jangna.Core.Entities;
@@ -67,6 +68,29 @@ public static class EmployeeEndpoints
             return Results.Ok(ToDto(employee));
         });
 
+        employees.MapGet("/import/template", async (JangnaDbContext db, CancellationToken ct) =>
+        {
+            var branches = await db.Branches.AsNoTracking().OrderBy(b => b.Name).Select(b => b.Name).ToListAsync(ct);
+            return Results.File(EmployeeImport.BuildTemplate(branches),
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "jangna-employees-template.xlsx");
+        });
+
+        // dryRun=true → ตรวจอย่างเดียว (แสดงผลก่อนยืนยัน) · dryRun=false → ตรวจซ้ำแล้วเพิ่มทั้งไฟล์ ถ้าไม่มีแถวผิด
+        employees.MapPost("/import", async (IFormFile file, bool? dryRun, JangnaDbContext db, CancellationToken ct) =>
+        {
+            if (file.Length is 0 or > EmployeeImport.MaxBytes)
+                return Results.Problem(L.T("ไฟล์ต้องไม่ว่างและไม่เกิน 2 MB", "The file must not be empty or larger than 2 MB"), statusCode: 400);
+            try
+            {
+                await using var stream = file.OpenReadStream();
+                return Results.Ok(await EmployeeImport.RunAsync(stream, commit: dryRun != true, db, ct));
+            }
+            catch (EmployeeImport.ImportException e)
+            {
+                return Results.Problem(e.Message, statusCode: e.Status);
+            }
+        }).DisableAntiforgery();
+
         employees.MapPost("/{id:guid}/status", async (Guid id, StatusRequest req, JangnaDbContext db, CancellationToken ct) =>
         {
             var employee = await db.Employees.FindAsync([id], ct);
@@ -114,6 +138,13 @@ public static class EmployeeEndpoints
 
     private static async Task<IResult?> Validate(EmployeeRequest req, Guid? id, JangnaDbContext db, CancellationToken ct)
     {
+        var errors = await ValidationErrorsAsync(req, id, db, ct);
+        return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
+    }
+
+    /// <summary>กฎตรวจพนักงานชุดเดียวกันทั้งฟอร์มเดี่ยวและนำเข้า Excel (key = ชื่อ field ของ EmployeeRequest)</summary>
+    public static async Task<Dictionary<string, string[]>> ValidationErrorsAsync(EmployeeRequest req, Guid? id, JangnaDbContext db, CancellationToken ct)
+    {
         var errors = new Dictionary<string, string[]>();
         if (string.IsNullOrWhiteSpace(req.FirstName)) errors["firstName"] = [L.T("กรุณากรอกชื่อ", "First name is required")];
         if (req.BaseRate < 0) errors["baseRate"] = [L.T("ค่าจ้างติดลบไม่ได้", "Pay rate cannot be negative")];
@@ -131,10 +162,10 @@ public static class EmployeeEndpoints
         }
         if (Clean(req.PostalCode) is { } postal && (postal.Length != 5 || !postal.All(char.IsAsciiDigit)))
             errors["postalCode"] = [L.T("รหัสไปรษณีย์ 5 หลัก", "Postal code must be 5 digits")];
-        return errors.Count > 0 ? Results.ValidationProblem(errors) : null;
+        return errors;
     }
 
-    private static void Apply(Employee e, EmployeeRequest req)
+    public static void Apply(Employee e, EmployeeRequest req)
     {
         e.FirstName = req.FirstName.Trim();
         e.LastName = req.LastName?.Trim() ?? "";
@@ -157,7 +188,7 @@ public static class EmployeeEndpoints
     private static string? Text(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     /// <summary>ตัวเลข: ตัดช่องว่าง/ขีด (1-2345-67890-12-3 → 1234567890123) ว่าง = null</summary>
-    private static string? Clean(string? value)
+    public static string? Clean(string? value)
     {
         if (string.IsNullOrWhiteSpace(value)) return null;
         var trimmed = value.Trim();

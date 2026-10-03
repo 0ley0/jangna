@@ -6,6 +6,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChipGroup } from "@/components/ui/chip";
+import { Dialog } from "@/components/ui/dialog";
+import { Icon } from "@/components/icons";
+import { ImportDialog } from "./import-dialog";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { FormError, SelectField, TextField } from "@/components/ui/form-field";
 import { api, ApiError } from "@/lib/api";
@@ -23,6 +26,9 @@ export default function EmployeesPage() {
   const { t } = useLang();
   const employees = useEmployees();
   const [editing, setEditing] = useState<Employee | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [formKey, setFormKey] = useState(0); // เปลี่ยนทุกครั้งที่เปิด เพื่อล้าง state ภายในฟอร์ม
   const [invite, setInvite] = useState<{ employee: Employee; invite: Invite } | null>(null);
 
   const createInvite = useMutation<Invite, ApiError, Employee>({
@@ -43,13 +49,32 @@ export default function EmployeesPage() {
 
   const edit = (e: Employee) => {
     setEditing(e);
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
+    setFormKey((k) => k + 1);
+  };
+  const add = () => {
+    setEditing(null);
+    setAdding(true);
+    setFormKey((k) => k + 1);
+  };
+  const closeForm = () => {
+    setEditing(null);
+    setAdding(false);
   };
 
   return (
     <div className="grid gap-6">
-      <EmployeeForm key={editing?.id ?? "new"} employee={editing} onDone={() => setEditing(null)} />
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" onClick={() => setImporting(true)}>
+          <Icon.Upload size={16} /> {t("นำเข้าจาก Excel", "Import from Excel")}
+        </Button>
+        <Button variant="accent" onClick={add}>
+          <Icon.Plus size={16} /> {t("เพิ่มพนักงาน", "Add employee")}
+        </Button>
+      </div>
+
+      <ImportDialog open={importing} onClose={() => setImporting(false)} />
+
+      <EmployeeForm key={formKey} open={adding || editing !== null} employee={editing} onDone={closeForm} />
 
       {invite && <InviteCard {...invite} onClose={() => setInvite(null)} />}
 
@@ -115,7 +140,7 @@ export default function EmployeesPage() {
 const text = (form: FormData, key: string) => String(form.get(key) ?? "").trim() || null;
 
 /** ฟอร์มเพิ่ม (employee = null) / แก้ไขพนักงาน */
-function EmployeeForm({ employee, onDone }: { employee: Employee | null; onDone: () => void }) {
+function EmployeeForm({ open, employee, onDone }: { open: boolean; employee: Employee | null; onDone: () => void }) {
   const { t, lang } = useLang();
   const branches = useBranches();
   const queryClient = useQueryClient();
@@ -147,7 +172,7 @@ function EmployeeForm({ employee, onDone }: { employee: Employee | null; onDone:
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: keys.employees });
-      if (employee) onDone();
+      onDone();
     },
   });
 
@@ -155,12 +180,13 @@ function EmployeeForm({ employee, onDone }: { employee: Employee | null; onDone:
   const e = employee;
 
   return (
-    <Card className={e ? "border-brand" : undefined}>
-      <CardHeader>
-        <CardTitle>{e ? `${t("แก้ไข", "Edit")} ${e.firstName} ${e.lastName}`.trim() : t("เพิ่มพนักงาน", "Add employee")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form action={(form) => save.mutate(form)} className="grid gap-4 sm:grid-cols-3" key={save.isSuccess && !e ? save.data.id : "form"}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => !o && onDone()}
+      size="lg"
+      title={e ? `${t("แก้ไข", "Edit")} ${e.firstName} ${e.lastName}`.trim() : t("เพิ่มพนักงาน", "Add employee")}
+    >
+        <form action={(form) => save.mutate(form)} className="grid gap-4 sm:grid-cols-3">
           <div className="sm:col-span-3">
             <FormError message={errors && Object.keys(errors).length ? null : save.error?.message} />
           </div>
@@ -256,18 +282,15 @@ function EmployeeForm({ employee, onDone }: { employee: Employee | null; onDone:
           />
 
           <div className="flex gap-2 sm:col-span-3">
-            <Button type="submit" variant={e ? "accent" : "default"} loading={save.isPending}>
+            <Button type="submit" variant="accent" loading={save.isPending}>
               {e ? t("บันทึกการแก้ไข", "Save changes") : t("เพิ่มพนักงาน", "Add employee")}
             </Button>
-            {e && (
-              <Button type="button" variant="ghost" onClick={onDone}>
-                {t("ยกเลิก", "Cancel")}
-              </Button>
-            )}
+            <Button type="button" variant="ghost" onClick={onDone}>
+              {t("ยกเลิก", "Cancel")}
+            </Button>
           </div>
         </form>
-      </CardContent>
-    </Card>
+    </Dialog>
   );
 }
 

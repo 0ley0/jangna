@@ -7,6 +7,7 @@ import { Icon } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { Dialog, useConfirm } from "@/components/ui/dialog";
 import { FormError, SelectField, TextField } from "@/components/ui/form-field";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableEmpty, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -216,6 +217,8 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
   const { t } = useLang();
   const queryClient = useQueryClient();
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["shift-templates"] });
+  const [open, setOpen] = useState(false);
+  const { ask, dialog } = useConfirm();
 
   const create = useMutation<ShiftTemplate, ApiError, FormData>({
     mutationFn: (form) =>
@@ -229,7 +232,10 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
           color: form.get("color"),
         },
       }),
-    onSuccess: refresh,
+    onSuccess: () => {
+      refresh();
+      setOpen(false);
+    },
   });
   const remove = useMutation<void, ApiError, string>({
     mutationFn: (id) => api(`/api/shift-templates/${id}`, { method: "DELETE" }),
@@ -241,8 +247,17 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex-row items-center justify-between gap-3">
         <CardTitle>{t("แม่แบบกะ", "Shift templates")}</CardTitle>
+        <Button
+          variant="accent"
+          onClick={() => {
+            create.reset();
+            setOpen(true);
+          }}
+        >
+          <Icon.Plus size={15} /> {t("เพิ่มแม่แบบกะ", "Add template")}
+        </Button>
       </CardHeader>
       <CardContent className="grid gap-4">
         {usable.length > 0 && (
@@ -251,7 +266,15 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
               <Chip
                 key={x.id}
                 tone={x.color}
-                onRemove={() => confirm(t(`ลบกะ "${x.name}"? (กะที่จัดไปแล้วยังอยู่)`, `Remove "${x.name}"? (planned shifts stay)`)) && remove.mutate(x.id)}
+                onRemove={async () => {
+                  const ok = await ask({
+                    title: t(`ลบกะ "${x.name}"?`, `Remove "${x.name}"?`),
+                    description: t("กะที่จัดไปแล้วในตารางยังอยู่ แต่จะเลือกแม่แบบนี้เพิ่มไม่ได้อีก", "Shifts already planned stay, but this template can't be picked again"),
+                    tone: "danger",
+                    confirmLabel: t("ลบ", "Remove"),
+                  });
+                  if (ok) remove.mutate(x.id);
+                }}
                 removeLabel={t("ลบแม่แบบ", "Remove template")}
               >
                 {x.name} · <span className="tabular">{span(x)}</span>
@@ -262,13 +285,11 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
             ))}
           </div>
         )}
-        <form
-          action={(form) => create.mutate(form)}
-          className="grid items-end gap-3 sm:grid-cols-6"
-          key={create.isSuccess ? create.data.id : "new"}
-        >
-          <div className="sm:col-span-6">
-            <FormError message={errors && Object.keys(errors).length ? null : (create.error?.message ?? remove.error?.message)} />
+        <FormError message={remove.error?.message} />
+        <Dialog open={open} onOpenChange={setOpen} title={t("เพิ่มแม่แบบกะ", "Add shift template")}>
+        <form action={(form) => create.mutate(form)} className="grid gap-4 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <FormError message={errors && Object.keys(errors).length ? null : create.error?.message} />
           </div>
           <TextField
             className="sm:col-span-2"
@@ -288,15 +309,20 @@ function TemplatesCard({ templates }: { templates: ShiftTemplate[] }) {
               </option>
             ))}
           </SelectField>
-          <div className="sm:col-span-6">
-            <Button type="submit" loading={create.isPending}>
-              <Icon.Plus size={15} /> {t("เพิ่มแม่แบบกะ", "Add template")}
+          <p className="text-xs text-muted-foreground sm:col-span-2">
+            {t("เวลาออกน้อยกว่าเวลาเข้า = กะข้ามเที่ยงคืน", "End before start = overnight shift")}
+          </p>
+          <div className="flex justify-end gap-2 sm:col-span-2">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              {t("ยกเลิก", "Cancel")}
             </Button>
-            <span className="ml-3 text-xs text-muted-foreground">
-              {t("เวลาออกน้อยกว่าเวลาเข้า = กะข้ามเที่ยงคืน", "End before start = overnight shift")}
-            </span>
+            <Button type="submit" variant="accent" loading={create.isPending}>
+              {t("เพิ่มแม่แบบกะ", "Add template")}
+            </Button>
           </div>
         </form>
+        </Dialog>
+        {dialog}
       </CardContent>
     </Card>
   );
