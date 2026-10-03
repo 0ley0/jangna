@@ -19,6 +19,18 @@ public static class ExportEndpoints
         exports.MapGet("/pnd1", (int year, int month, ExportService service, CancellationToken ct) =>
             Handle(async () => File(await service.Pnd1Async(year, month, ct))));
 
+        exports.MapGet("/pnd3", (int year, int month, ExportService service, CancellationToken ct) =>
+            Handle(async () => File(await service.Pnd3Async(year, month, ct))));
+
+        exports.MapGet("/year-summary", (int year, ExportService service, CancellationToken ct) =>
+            Handle(async () => Results.Ok(await service.YearSummaryAsync(year, ct))));
+
+        exports.MapGet("/pnd1a", (int year, ExportService service, CancellationToken ct) =>
+            Handle(async () => File(await service.Pnd1AAsync(year, ct))));
+
+        exports.MapGet("/certificates", (int year, Guid? employeeId, ExportService service, CancellationToken ct) =>
+            Handle(async () => File(await service.CertificatesAsync(year, employeeId, ct))));
+
         api.MapGet("/pay-runs/{id:guid}/payslips", (Guid id, Guid? employeeId, string? lang, ExportService service, CancellationToken ct) =>
                 Handle(async () => File(await service.PayslipsAsync(id, employeeId, lang, ct))))
             .RequireAuthorization(Policies.Manager);

@@ -85,6 +85,64 @@ public class ExportFlowTests(ApiFactory factory) : IClassFixture<ApiFactory>
             pndLines[1]);
     }
 
+    /// <summary>
+    /// ลูกจ้างเดือน 50,000 (ภาษี 6,816.67 เมื่อมียอดยกมา 450,000) + ฟรีแลนซ์เดือน 10,000 → หัก 3% = 300.00
+    /// </summary>
+    [Fact]
+    public async Task Freelancer_pnd3_annual_pnd1a_and_certificates()
+    {
+        var (http, _, _) = await LockedOctoberRun();
+        var freelancer = new EmployeeEndpoints.EmployeeRequest("มานี", "รับจ้าง", null, null, null, PayType.Monthly, 10_000m, WorkerType.Freelance, "th",
+            Title.Miss, "1101700203468", "9 ถนนสุข", "บางรัก", "บางรัก", "กรุงเทพมหานคร", "10500");
+        Assert.Equal(HttpStatusCode.Created, (await http.PostAsJsonAsync("/api/employees", freelancer, Json.Options)).StatusCode);
+
+        var run = (await (await http.PostAsJsonAsync("/api/pay-runs",
+                new PayRunEndpoints.CreatePayRunRequest(new(2026, 11, 1), new(2026, 11, 30), new(2026, 11, 30)), Json.Options))
+            .Content.ReadFromJsonAsync<PayRunEndpoints.PayRunDetail>(Json.Options))!;
+        var free = run.Items.Single(i => i.IsFreelance);
+        Assert.Equal(10_000m, free.Gross);
+        Assert.Equal(300m, free.WithholdingTax);
+        (await http.PostAsync($"/api/pay-runs/{run.Summary.Id}/lock", null)).EnsureSuccessStatusCode();
+
+        var month = (await http.GetFromJsonAsync<ExportService.MonthSummary>("/api/exports/summary?year=2026&month=11", Json.Options))!;
+        Assert.Equal(1, month.Pnd3.Employees);
+        Assert.Equal(300m, month.Pnd3.Tax);
+        Assert.Empty(month.Pnd3.Issues);
+
+        var pnd3 = await http.GetAsync("/api/exports/pnd3?year=2026&month=11");
+        Assert.Equal(HttpStatusCode.OK, pnd3.StatusCode);
+        Assert.Equal($"PND3_1234567890121_000000_2569_11.csv", pnd3.Content.Headers.ContentDisposition?.FileName);
+        var csv = (await pnd3.Content.ReadAsStringAsync()).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, csv.Length);
+        Assert.Contains("\"1101700203468\",\"นางสาว\",\"มานี\",\"รับจ้าง\"", csv[1]);
+        Assert.EndsWith("\"30/11/2569\",\"ค่าจ้างทำของ/บริการ\",\"3\",\"10000.00\",\"300.00\",\"1\"", csv[1]);
+        Assert.Equal(HttpStatusCode.NotFound, (await http.GetAsync("/api/exports/pnd3?year=2026&month=10")).StatusCode);
+
+        // ลูกจ้างไม่อยู่ใน ภ.ง.ด.3 และฟรีแลนซ์ไม่อยู่ใน ภ.ง.ด.1
+        var pnd1 = (await http.GetStringAsync("/api/exports/pnd1?year=2026&month=11")).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, pnd1.Length);
+        Assert.DoesNotContain("1101700203468", string.Join('\n', pnd1));
+
+        var year = (await http.GetFromJsonAsync<ExportService.YearSummary>("/api/exports/year-summary?year=2026", Json.Options))!;
+        Assert.Equal(2, year.LockedRuns);
+        Assert.Equal(1, year.Pnd1A.Employees);
+        Assert.Equal(2, year.Certificates.Employees);
+        Assert.Equal(50_000m + 50_000m, year.Pnd1A.Paid); // ต.ค. + พ.ย. ของลูกจ้าง
+        Assert.Equal(300m + year.Pnd1A.Tax, year.Certificates.Tax);
+
+        var pnd1a = await http.GetAsync("/api/exports/pnd1a?year=2026");
+        Assert.Equal(HttpStatusCode.OK, pnd1a.StatusCode);
+        Assert.Equal("PND1A_1234567890121_000000_2569_00_00_00.txt", pnd1a.Content.Headers.ContentDisposition?.FileName);
+        var lines = (await pnd1a.Content.ReadAsStringAsync()).Split("\r\n", StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length); // header + ลูกจ้าง 1 คน (ฟรีแลนซ์ไม่อยู่ใน 1ก)
+        Assert.StartsWith("H|0000|1234567890121|000000|1|PND1A|", lines[0]);
+        Assert.Contains($"|{NationalId}|", lines[1]);
+
+        var certs = await http.GetAsync("/api/exports/certificates?year=2026");
+        Assert.Equal(HttpStatusCode.OK, certs.StatusCode);
+        Assert.Equal("%PDF", Encoding.ASCII.GetString(await certs.Content.ReadAsByteArrayAsync(), 0, 4));
+    }
+
     [Fact]
     public async Task Missing_filing_info_is_reported_bilingually_and_blocks_download()
     {

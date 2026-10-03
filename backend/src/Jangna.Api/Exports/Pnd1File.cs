@@ -10,7 +10,11 @@ namespace Jangna.Api.Exports;
 /// </summary>
 public static class Pnd1File
 {
-    public sealed record Header(string TaxId, string BranchNo, int Year, int Month, string? RdUserId);
+    /// <summary>Month = 0 → ภ.ง.ด.1ก (สรุปทั้งปี) — สมมติฐาน: ใช้โครงเดียวกับ ภ.ง.ด.1 เปลี่ยนชนิดแบบเป็น PND1A และเดือนเป็น 00</summary>
+    public sealed record Header(string TaxId, string BranchNo, int Year, int Month, string? RdUserId)
+    {
+        public bool Annual => Month == 0;
+    }
 
     public sealed record Row(
         string NationalId, string Title, string FirstName, string LastName, DateOnly PaidDate, decimal PaidAmount, decimal Tax,
@@ -26,7 +30,9 @@ public static class Pnd1File
     };
 
     /// <summary>TAX_TYPE_NID_BRANCH_YEAR_MONTH_FORMTYPE_ครั้งที่ส่ง.txt</summary>
-    public static string FileName(Header h) => $"PND1_{h.TaxId}_{h.BranchNo}_{h.Year + 543}_{h.Month:00}_00_00.txt";
+    public static string FileName(Header h) => $"{FormCode(h)}_{h.TaxId}_{h.BranchNo}_{h.Year + 543}_{h.Month:00}_00_00.txt";
+
+    private static string FormCode(Header h) => h.Annual ? "PND1A" : "PND1";
 
     public static string Build(Header h, IReadOnlyList<Row> rows)
     {
@@ -37,7 +43,7 @@ public static class Pnd1File
 
         var sb = new StringBuilder();
         Line(sb,
-            "H", "0000", h.TaxId, h.BranchNo, "1", "PND1", h.TaxId, h.BranchNo, "สำนักงานใหญ่", "0",
+            "H", "0000", h.TaxId, h.BranchNo, "1", FormCode(h), h.TaxId, h.BranchNo, "สำนักงานใหญ่", "0",
             $"{h.Month:00}", $"{h.Year + 543}", "", "00", rows.Count.ToString(CultureInfo.InvariantCulture),
             Money(totalPaid), Money(totalTax), Money(0), Money(totalTax), Money(internet ? totalTax : 0),
             Clean(h.RdUserId, 20), internet ? "2" : "1");

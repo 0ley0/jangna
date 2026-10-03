@@ -92,6 +92,15 @@ export interface FilingSummary {
   draftRuns: number;
   sso: { employees: number; wages: number; employeeContribution: number; employerContribution: number; issues: LocalizedText[] };
   pnd1: { employees: number; paid: number; tax: number; issues: LocalizedText[] };
+  pnd3: { employees: number; paid: number; tax: number; issues: LocalizedText[] };
+}
+
+export interface YearFilingSummary {
+  year: number;
+  lockedRuns: number;
+  draftRuns: number;
+  pnd1A: { employees: number; paid: number; tax: number; issues: LocalizedText[] };
+  certificates: { employees: number; paid: number; tax: number; issues: LocalizedText[] };
 }
 
 export type ShiftColor = "brand" | "sage" | "amber" | "plum" | "blue" | "neutral";
@@ -287,3 +296,16 @@ export const payLineLabels: Record<string, Bi> = {
   WHT: ["ภาษีหัก ณ ที่จ่าย", "Withholding tax"],
   ADVANCE: ["หักเงินเบิกล่วงหน้า", "Advance deduction"],
 };
+
+export interface ImportRowResult {
+  row: number;
+  name: string;
+  errors: string[];
+}
+
+export interface ImportReport {
+  total: number;
+  valid: number;
+  imported: number;
+  rows: ImportRowResult[];
+}

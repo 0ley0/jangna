@@ -12,7 +12,7 @@ import { FormError } from "@/components/ui/form-field";
 import { api, ApiError, downloadFile } from "@/lib/api";
 import { baht, fmtMonth } from "@/lib/format";
 import { useLang } from "@/lib/i18n";
-import type { FilingSummary, LocalizedText } from "@/lib/types";
+import type { FilingSummary, LocalizedText, YearFilingSummary } from "@/lib/types";
 
 /** ค่าเริ่มต้น = เดือนที่แล้ว (ยื่นของเดือนที่แล้วภายในวันที่ 7/15 ของเดือนนี้) */
 function lastMonth() {
@@ -50,7 +50,28 @@ export default function FilingsPage() {
     mutationFn: () => downloadFile(`/api/exports/pnd1?year=${year}&month=${month}`, `PND1_${year}_${month}.txt`),
   });
 
+  const pnd3 = useMutation<void, ApiError>({
+    mutationFn: () => downloadFile(`/api/exports/pnd3?year=${year}&month=${month}`, `PND3_${year}_${month}.csv`),
+  });
+
+  // ภ.ง.ด.1ก / 50 ทวิ ยื่นสิ้นปี (ภายในสิ้น ก.พ. ปีถัดไป) — ม.ค.-ก.พ. ค่าเริ่มต้นคือปีที่แล้ว
+  const [taxYear, setTaxYear] = useState(() => {
+    const now = new Date();
+    return now.getMonth() < 2 ? now.getFullYear() - 1 : now.getFullYear();
+  });
+  const yearSummary = useQuery({
+    queryKey: ["filings-year", taxYear],
+    queryFn: () => api<YearFilingSummary>(`/api/exports/year-summary?year=${taxYear}`),
+  });
+  const pnd1a = useMutation<void, ApiError>({
+    mutationFn: () => downloadFile(`/api/exports/pnd1a?year=${taxYear}`, `PND1A_${taxYear}.txt`),
+  });
+  const certs = useMutation<void, ApiError>({
+    mutationFn: () => downloadFile(`/api/exports/certificates?year=${taxYear}`, `50twi_${taxYear}.pdf`),
+  });
+
   const s = summary.data;
+  const y = yearSummary.data;
 
   return (
     <div className="grid gap-6">
@@ -161,12 +182,150 @@ export default function FilingsPage() {
             <FormError message={pnd1.error?.message} />
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {t("ภ.ง.ด.3 ภาษีหัก ณ ที่จ่าย (ฟรีแลนซ์)", "PND 3 withholding tax (freelancers)")}
+              {s && <Ready issues={s.pnd3.issues} empty={s.pnd3.employees === 0} />}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "ตามวันที่จ่ายเงินในเดือนนี้ เฉพาะฟรีแลนซ์ที่ถูกหัก 3% ยื่นภายในวันที่ 7 ของเดือนถัดไป (ออนไลน์ได้ถึงวันที่ 15) — ไฟล์ CSV ใบแนบ ใช้กรอกต่อในระบบสรรพากร ยังไม่ใช่ไฟล์นำเข้าทางการ",
+                "By pay date, only freelancers with 3% withheld. File by the 7th of the next month (15th online) — attachment-list CSV to key into the Revenue system; not an official import file",
+              )}
+            </p>
+            {s && (
+              <dl className="grid grid-cols-3 gap-3">
+                <Stat label={t("ผู้มีเงินได้", "Payees")} value={String(s.pnd3.employees)} />
+                <Stat label={t("เงินได้ที่จ่าย", "Income paid")} value={baht(s.pnd3.paid)} />
+                <Stat label={t("ภาษีที่หัก", "Tax withheld")} value={baht(s.pnd3.tax)} />
+              </dl>
+            )}
+            {s && s.pnd3.employees === 0 && s.pnd3.issues.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                {t("เดือนนี้ไม่มีภาษีหักของฟรีแลนซ์ — ไม่ต้องยื่น ภ.ง.ด.3", "No freelancer tax withheld this month — no PND 3 to file")}
+              </p>
+            )}
+            {s && <Issues issues={s.pnd3.issues} />}
+            <Button
+              variant="accent"
+              className="justify-self-start"
+              onClick={() => pnd3.mutate()}
+              loading={pnd3.isPending}
+              disabled={!s || s.pnd3.employees === 0 || s.pnd3.issues.length > 0}
+            >
+              <Icon.Download size={16} /> {t("ดาวน์โหลดรายการ ภ.ง.ด.3 (CSV)", "Download PND 3 list (CSV)")}
+            </Button>
+            <FormError message={pnd3.error?.message} />
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-semibold">{t("สิ้นปี", "Year-end")}</span>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="outline" size="icon-sm" onClick={() => setTaxYear(taxYear - 1)} aria-label={t("ปีก่อน", "Previous year")}>
+            <Icon.ChevronLeft size={15} />
+          </Button>
+          <span className="min-w-36 text-center font-semibold">
+            {lang === "th" ? `ปีภาษี ${taxYear + 543}` : `Tax year ${taxYear}`}
+          </span>
+          <Button variant="outline" size="icon-sm" onClick={() => setTaxYear(taxYear + 1)} aria-label={t("ปีถัดไป", "Next year")}>
+            <Icon.Chevron size={15} />
+          </Button>
+        </div>
+      </div>
+
+      {yearSummary.error && <FormError message={yearSummary.error.message} />}
+
+      {y && y.draftRuns > 0 && (
+        <p className="rounded-xl bg-amber-soft px-3 py-2 text-sm text-amber-ink">
+          {t(
+            `มีรอบจ่ายร่าง ${y.draftRuns} รอบในปีนี้ — ยังไม่นับรวม`,
+            `${y.draftRuns} draft pay run(s) this year are not included`,
+          )}
+        </p>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {t("ภ.ง.ด.1ก สรุปเงินเดือนทั้งปี", "PND 1A annual salary summary")}
+              {y && <Ready issues={y.pnd1A.issues} empty={y.pnd1A.employees === 0} />}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "รวมเงินได้และภาษีของลูกจ้างทุกคนตามวันจ่ายทั้งปี ยื่นภายในสิ้นเดือนกุมภาพันธ์ปีถัดไป — ไม่รวมยอดยกมาต้นปี ถ้าย้ายมาใช้กลางปีให้บวกเอง",
+                "Per-employee income and tax by pay date for the year. File by end of February next year — excludes opening balances, so add them yourself if you joined mid-year",
+              )}
+            </p>
+            {y && (
+              <dl className="grid grid-cols-3 gap-3">
+                <Stat label={t("ลูกจ้าง", "Employees")} value={String(y.pnd1A.employees)} />
+                <Stat label={t("เงินได้ที่จ่าย", "Income paid")} value={baht(y.pnd1A.paid)} />
+                <Stat label={t("ภาษีที่หัก", "Tax withheld")} value={baht(y.pnd1A.tax)} />
+              </dl>
+            )}
+            {y && <Issues issues={y.pnd1A.issues} />}
+            <Button
+              variant="accent"
+              className="justify-self-start"
+              onClick={() => pnd1a.mutate()}
+              loading={pnd1a.isPending}
+              disabled={!y || y.pnd1A.employees === 0 || y.pnd1A.issues.length > 0}
+            >
+              <Icon.Download size={16} /> {t("ดาวน์โหลดไฟล์ ภ.ง.ด.1ก", "Download PND 1A file")}
+            </Button>
+            <FormError message={pnd1a.error?.message} />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              {t("หนังสือรับรองหักภาษี (50 ทวิ)", "Withholding tax certificates (50 Tawi)")}
+              {y && <Ready issues={y.certificates.issues} empty={y.certificates.employees === 0} />}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            <p className="text-sm text-muted-foreground">
+              {t(
+                "ออกให้ลูกจ้างและฟรีแลนซ์ทุกคนที่ถูกหักภาษีในปีนี้ คนละหน้า — ผู้จ่ายตรวจและลงนามก่อนส่งมอบ",
+                "One page per employee and freelancer with tax withheld this year — the payer reviews and signs before handing over",
+              )}
+            </p>
+            {y && (
+              <dl className="grid grid-cols-3 gap-3">
+                <Stat label={t("ผู้ถูกหักภาษี", "Payees")} value={String(y.certificates.employees)} />
+                <Stat label={t("เงินได้ที่จ่าย", "Income paid")} value={baht(y.certificates.paid)} />
+                <Stat label={t("ภาษีที่หัก", "Tax withheld")} value={baht(y.certificates.tax)} />
+              </dl>
+            )}
+            {y && <Issues issues={y.certificates.issues} />}
+            <Button
+              variant="accent"
+              className="justify-self-start"
+              onClick={() => certs.mutate()}
+              loading={certs.isPending}
+              disabled={!y || y.certificates.employees === 0 || y.certificates.issues.length > 0}
+            >
+              <Icon.Download size={16} /> {t("ดาวน์โหลด 50 ทวิ (PDF)", "Download 50 Tawi (PDF)")}
+            </Button>
+            <FormError message={certs.error?.message} />
+          </CardContent>
+        </Card>
       </div>
 
       <p className="text-xs text-muted-foreground">
         {t(
-          "ครั้งแรกที่ยื่น ให้ตรวจไฟล์กับระบบของ สปส./สรรพากร ก่อน (อัปโหลดแล้วดูหน้าตรวจสอบ) — ฟรีแลนซ์ (ภ.ง.ด.3) ยังไม่มีไฟล์ให้",
-          "The first time you file, check the file in the SSO / Revenue Department system before submitting. Freelancers (PND 3) are not exported yet.",
+          "ครั้งแรกที่ยื่น ให้ตรวจไฟล์กับระบบของ สปส./สรรพากร ก่อน (อัปโหลดแล้วดูหน้าตรวจสอบ) — รูปแบบ ภ.ง.ด.1ก ยังเป็นสมมติฐานจากรูปแบบ ภ.ง.ด.1",
+          "The first time you file, check the file in the SSO / Revenue Department system before submitting. The PND 1A layout is assumed from the PND 1 format.",
         )}
       </p>
     </div>

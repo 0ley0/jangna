@@ -32,7 +32,7 @@ public static class PayslipPdf
     private static bool _initialized;
 
     /// <summary>ลงทะเบียน license + ฟอนต์ครั้งเดียว (ฟอนต์ฝังใน assembly — ดู Jangna.Api.csproj)</summary>
-    private static void EnsureInitialized()
+    internal static void EnsureInitialized()
     {
         lock (InitLock)
         {
